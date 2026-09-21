@@ -1,0 +1,26 @@
+# secrets
+.env
+backend/.env
+frontend/.env
+*.env
+!*.env.example
+
+# python
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+
+# node
+node_modules/
+dist/
+build/
+
+# uploads (runtime data, not code)
+uploads/*
+!uploads/.gitkeep
+
+# os/editor
+.DS_Store
+.vscode/

@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gridpulse_db
+    environment:
+      POSTGRES_USER: gridpulse
+      POSTGRES_PASSWORD: gridpulse
+      POSTGRES_DB: gridpulse
+    ports:
+      - "5432:5432"
+    volumes:
+      - gridpulse_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gridpulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: gridpulse_backend
+    environment:
+      DATABASE_URL: postgresql+psycopg2://gridpulse:gridpulse@db:5432/gridpulse
+      UPLOAD_DIRECTORY: /app/uploads
+      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./scripts:/scripts
+      - ./ml:/ml
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  gridpulse_pgdata:

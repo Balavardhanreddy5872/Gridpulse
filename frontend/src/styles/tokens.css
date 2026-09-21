@@ -1,0 +1,44 @@
+/*
+  GridPulse design tokens.
+
+  Control-room aesthetic: grid operators stare at this all shift, so it
+  leans dark, high-contrast for numbers, and quiet everywhere else. Data
+  readouts (loads, capacities, percentages) use a monospace face so
+  digits line up in columns - the same reason real SCADA/operations
+  dashboards do this, not decoration.
+*/
+:root {
+  /* Color: deep slate-navy control-room palette, not pure black */
+  --bg-canvas: #0c1420;
+  --bg-panel: #121d2e;
+  --bg-panel-raised: #17263c;
+  --line: #24374f;
+  --line-soft: #1a2a3f;
+
+  --text-primary: #eaf1f7;
+  --text-secondary: #8ea0b8;
+  --text-tertiary: #5b6b82;
+
+  --accent-signal: #ffb454;   /* watch */
+  --accent-current: #4fd1c5;  /* primary brand teal - "current" as in electrical current */
+  --status-normal: #4ade80;
+  --status-watch: #ffb454;
+  --status-high: #ff8a5c;
+  --status-critical: #ff5c72;
+
+  /* Type */
+  --font-ui: "IBM Plex Sans", -apple-system, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, monospace;
+
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.8125rem;
+  --fs-base: 0.9375rem;
+  --fs-md: 1.125rem;
+  --fs-lg: 1.5rem;
+  --fs-xl: 2.25rem;
+
+  /* Layout */
+  --sidebar-w: 15.5rem;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+}

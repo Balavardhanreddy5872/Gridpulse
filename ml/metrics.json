@@ -1,0 +1,12 @@
+{
+  "model_version": "xgboost-v1",
+  "trained": true,
+  "trained_at": "2026-09-13T16:02:49.472754+00:00",
+  "mae_mw": 21.12,
+  "rmse_mw": 35.12,
+  "mape_pct": 3.46,
+  "train_rows": 4800,
+  "test_rows": 720,
+  "test_window_days": 3,
+  "note": "xgboost regressor trained on [1, 24, 168] lag features + [24]h rolling mean + weather + calendar features, evaluated on the most recent held-out days of the seeded dataset."
+}
