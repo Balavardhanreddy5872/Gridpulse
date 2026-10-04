@@ -1,9 +1,21 @@
 # GridPulse — Smart Grid Load Forecasting & Peak-Risk Alerting
 
-**Status: All 3 stages complete. Runs entirely without Docker** — Postgres,
-Python, and Node all installed and run natively. (A `Dockerfile` and
-`docker-compose.yml` are included for a *later* course milestone that
-explicitly asks for containerization — they are not used or needed here.)
+**Status:** Milestone 3 — fully containerized. `docker compose up --build`
+runs the whole stack (Postgres + FastAPI + React/nginx); the same versioned
+images are pushed to Google Artifact Registry and pulled onto the course VM.
+The original native (no-Docker) setup in §2–3 still works for development.
+
+## 0. Run with Docker (Milestone 3)
+
+```bash
+cp .env.example .env        # set POSTGRES_PASSWORD
+docker compose up --build
+```
+- Dashboard: **http://localhost** · API docs: **http://localhost:8000/docs**
+- The DB is seeded automatically on first start; the trained model is baked
+  into the backend image.
+- Push to Artifact Registry, deploy on the VM, verify no secrets, budget
+  steps: see **[docs/milestone3/RUNBOOK.md](docs/milestone3/RUNBOOK.md)**.
 
 ## 1. What's included
 
@@ -142,10 +154,8 @@ tests specifically.)
 | `async_jobs` table + asyncio worker | Amazon SQS + Lambda/ECS worker |
 | — | Amazon CloudWatch for monitoring |
 
-**Containerization** (Dockerfile / docker-compose.yml, included in this
-repo) belongs to a later milestone in the course roadmap
-("Containerize & Deploy") — not part of the working-local-app requirement
-this README covers.
+**Containerization** (Dockerfile / docker-compose.yml) is done in Milestone 3 —
+see §0 and `docs/milestone3/RUNBOOK.md`.
 
 ## 6. Team
 - Harshitha Tumati — Database & data modeling

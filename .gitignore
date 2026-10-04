@@ -24,3 +24,7 @@ uploads/*
 # os/editor
 .DS_Store
 .vscode/
+
+# archives (a repo tarball can contain .env files)
+*.tar.gz
+*.zip

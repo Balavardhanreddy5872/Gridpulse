@@ -1,37 +1,85 @@
+# GridPulse - Milestone 3 (containerized)
+#
+#   Laptop:  cp .env.example .env   # then set POSTGRES_PASSWORD
+#            docker compose up --build
+#            -> http://localhost        (dashboard; http://localhost:8080 if FRONTEND_PORT=8080)
+#            -> http://localhost:8000/docs  (API docs)
+#
+#   VM:      docker compose pull
+#            docker compose up -d --no-build
+#            -> http://<VM external IP>[:FRONTEND_PORT]  (same URL as Milestone 2)
+#
+# backend + frontend are tagged with their Artifact Registry names, so the
+# image built on the laptop IS the image pushed to the registry and pulled
+# on the VM. `platform: linux/amd64` pins them to the VM's CPU architecture
+# (an M-series Mac runs them under emulation), keeping the digest identical
+# on both machines.
+
+name: gridpulse
+
 services:
   db:
     image: postgres:16-alpine
-    container_name: gridpulse_db
+    restart: unless-stopped
     environment:
-      POSTGRES_USER: gridpulse
-      POSTGRES_PASSWORD: gridpulse
-      POSTGRES_DB: gridpulse
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-gridpulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (copy .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:-gridpulse}
     volumes:
-      - gridpulse_pgdata:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - data-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gridpulse"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+    # No `ports:` on purpose - Postgres is reachable only by the backend,
+    # over the internal data-net network, never from the host or internet.
 
   backend:
-    build: ./backend
-    container_name: gridpulse_backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: ${REGISTRY:-us-central1-docker.pkg.dev/gridpulse-509202/gridpulse}/gridpulse-backend:${IMAGE_TAG:-v1}
+    platform: linux/amd64
+    restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg2://gridpulse:gridpulse@db:5432/gridpulse
-      UPLOAD_DIRECTORY: /app/uploads
-      CORS_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
-    ports:
-      - "8000:8000"
+      # Secret assembled at RUN time from .env - never baked into the image.
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-gridpulse}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-gridpulse}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost,http://127.0.0.1}
     volumes:
-      - ./uploads:/app/uploads
-      - ./scripts:/scripts
-      - ./ml:/ml
+      - uploads:/app/uploads
+    ports:
+      - "8000:8000"          # Swagger UI at :8000/docs (port already open in the M2 firewall rule)
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - data-net
+      - web-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: ${REGISTRY:-us-central1-docker.pkg.dev/gridpulse-509202/gridpulse}/gridpulse-frontend:${IMAGE_TAG:-v1}
+    platform: linux/amd64
+    restart: unless-stopped
+    ports:
+      # Dashboard. Host port comes from FRONTEND_PORT in .env (default 80) so the
+      # VM can serve the app at exactly the URL Milestone 2 used (e.g. :8080).
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - web-net
 
 volumes:
-  gridpulse_pgdata:
+  pgdata:     # Postgres data survives container restarts / image upgrades
+  uploads:    # uploaded infrastructure PDFs
+
+networks:
+  web-net:    # frontend (nginx) <-> backend
+  data-net:   # backend <-> db   (frontend cannot reach the database at all)

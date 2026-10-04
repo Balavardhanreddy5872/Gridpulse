@@ -1,0 +1,42 @@
+# .dockerignore - applies to BOTH images (each build's context is the repo root).
+# Anything listed here is never sent to the Docker builder, so it can never
+# end up in an image layer, no matter what a COPY line says.
+
+# --- Secrets ---------------------------------------------------------------
+# Real env files hold the DB password; they are supplied at run time instead.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*credentials*.json
+**/service-account*.json
+
+# --- Version control, editor & OS clutter ----------------------------------
+.git
+**/.DS_Store
+.vscode
+.idea
+
+# --- Host-built dependencies (macOS binaries; rebuilt for Linux inside) ----
+**/node_modules
+**/venv
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+
+# --- Build output ------------------------------------------------------------
+frontend/dist
+
+# --- Runtime data: lives in Docker volumes, not in the image -----------------
+uploads
+
+# --- Not needed to run the app ----------------------------------------------
+backend/tests
+docs
+database
+deploy
+README.md
+**/*.tar.gz
+**/*.zip
+docker-compose*.yml
