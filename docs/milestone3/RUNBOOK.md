@@ -7,7 +7,7 @@ run on a laptop with Docker Compose and on `gridpulse-vm`, with **identical dige
 |---|---|
 | GCP project | `gridpulse-509202` |
 | Registry | `us-central1-docker.pkg.dev/gridpulse-509202/gridpulse` |
-| VM | `gridpulse-vm` · `us-central1-a` · e2-medium · http://23.251.144.238 |
+| VM | `gridpulse-vm` · `us-central1-a` · e2-medium · http://35.184.90.182 |
 
 ---
 
@@ -119,8 +119,7 @@ sudo systemctl disable --now postgresql 2>/dev/null || true  # native DB no long
 (If you ran things in tmux/screen or as systemd units in M2, stop those instead.)
 
 **5.3 Get the compose file** — only config is needed on the VM, not a Python/Node install.
-Match the Milestone 2 URL: if M2 was `http://23.251.144.238:8080`, set `FRONTEND_PORT=8080` in `.env`
-(and make sure the firewall rule allows TCP 8080); if it was plain `http://23.251.144.238`, leave it at 80.
+Milestone 2 served the app on port 80 (`http://35.184.90.182`), so keep `FRONTEND_PORT=80` in `.env`.
 ```bash
 cd ~/<the repo folder you cloned in M2> && git pull
 #   or: git clone https://github.com/Balavardhanreddy5872/Gridpulse.git && cd Gridpulse
@@ -138,7 +137,7 @@ exit        # then SSH back in so the docker group applies
 cd ~/<repo folder>
 ./deploy/vm_deploy.sh 2>&1 | tee ~/m3_vm_pull_and_run.log
 ```
-Open **http://23.251.144.238** (or `:8080` if you set `FRONTEND_PORT=8080`) — same URL as Milestone 2.
+Open **http://35.184.90.182** — same URL as Milestone 2.
 
 **The "same artifact" proof** — run on the laptop *and* the VM; the `sha256:` must match:
 ```bash
@@ -146,9 +145,8 @@ docker image inspect --format '{{index .RepoDigests 0}}' \
   us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-backend:v1
 ```
 
-> ⚠️ If `23.251.144.238` is an *ephemeral* IP, stopping the VM gives it a new IP. Before you
-> ever stop it, promote it to static so the URL survives:
-> `gcloud compute addresses create gridpulse-ip --addresses=23.251.144.238 --region=us-central1`
+> The VM's IP is reserved as static (`gridpulse-ip`), so it survives stop/start:
+> `gcloud compute addresses create gridpulse-ip --addresses=35.184.90.182 --region=us-central1`
 
 ## 6. Budget guardrails  *(5 pts)*
 

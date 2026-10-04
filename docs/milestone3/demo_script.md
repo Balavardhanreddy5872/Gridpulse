@@ -10,7 +10,7 @@ Presenter names below are a suggested split by role — swap freely.
 - [ ] VM: deployed once with `./deploy/vm_deploy.sh` to confirm it works, then reset so the pull is visible on camera:
       `docker compose down && docker image rm $(docker image ls -q 'us-central1-docker.pkg.dev/*/*/gridpulse-*')`
 - [ ] Budget already edited to include 10 % and 25 % thresholds
-- [ ] Browser tabs open: localhost · Artifact Registry repo · Budgets page · `http://23.251.144.238` (not loaded yet)
+- [ ] Browser tabs open: localhost · Artifact Registry repo · Budgets page · `http://35.184.90.182` (not loaded yet)
 - [ ] A small PDF ready for the Documents upload
 
 ---
@@ -58,7 +58,7 @@ Show (SSH window):
 2. `./deploy/vm_deploy.sh` → layers downloading from `us-central1-docker.pkg.dev`, services **healthy**.
    Point out `--no-build`: nothing is compiled on the VM.
 3. The digest it prints → **same first 8 characters as the laptop.**
-4. Browser `http://23.251.144.238` → Dashboard → recompute a forecast. Then `:8000/docs`.
+4. Browser `http://35.184.90.182` → Dashboard → recompute a forecast. Then `:8000/docs`.
 5. `docker compose logs --tail=20 backend`.
 
 > "Same digest, byte-for-byte the same artifact, at the same URL we used in Milestone 2."
