@@ -1,0 +1,42 @@
+iamdevil301@gridpulse-vm:~/gridpulse$ cd ~/gridpulse
+docker image inspect --format '{{index .RepoDigests 0}}' \
+  us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-backend:v1 \
+  us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-frontend:v1
+curl -s -X POST localhost/api/forecast/1 | grep -o '"model_version":"[^"]*"'
+docker compose ps
+docker image ls | grep gridpulse
+us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-backend@sha256:687b32e25721f1a3e17cd6e440c5ef572e7f688b2c5feda1b688ee78312f8630
+us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-frontend@sha256:403816f230e614d73c5caa6ba8908492ee7a58d59a7f3316f4827b39d5936f2c
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+"model_version":"xgboost-v1"
+NAME                   IMAGE                                                                         COMMAND                  SERVICE    CREATED          STATUS                    PORTS
+gridpulse-backend-1    us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-backend:v1    "sh -c 'python /app/…"   backend    15 minutes ago   Up 14 minutes (healthy)   0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+gridpulse-db-1         postgres:16-alpine                                                            "docker-entrypoint.s…"   db         15 minutes ago   Up 15 minutes (healthy)   5432/tcp
+gridpulse-frontend-1   us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-frontend:v1   "/docker-entrypoint.…"   frontend   15 minutes ago   Up 14 minutes (healthy)   0.0.0.0:80->80/tcp, [::]:80->80/tcp
+WARNING: This output is designed for human readability. For machine-readable output, please use --format.
+us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-backend:v1    687b32e25721        804MB          192MB   U    
+us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-frontend:v1   403816f230e6       74.5MB         21.2MB   U    
+iamdevil301@gridpulse-vm:~/gridpulse$
