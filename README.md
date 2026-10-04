@@ -1,11 +1,11 @@
 # GridPulse — Smart Grid Load Forecasting & Peak-Risk Alerting
 
-**Status:** Milestone 3 — fully containerized. `docker compose up --build`
+`docker compose up --build`
 runs the whole stack (Postgres + FastAPI + React/nginx); the same versioned
 images are pushed to Google Artifact Registry and pulled onto the course VM.
 The original native (no-Docker) setup in §2–3 still works for development.
 
-## 0. Run with Docker (Milestone 3)
+## 0. Run with Docker
 
 ```bash
 cp .env.example .env        # set POSTGRES_PASSWORD
@@ -156,10 +156,3 @@ tests specifically.)
 
 **Containerization** (Dockerfile / docker-compose.yml) is done in Milestone 3 —
 see §0 and `docs/milestone3/RUNBOOK.md`.
-
-## 6. Team
-- Harshitha Tumati — Database & data modeling
-- Arun Reddy Karnati — Forecasting model & business logic
-- BalaVardhan Reddy Konda — API & asynchronous processing
-- Tanmaya Sai Dudipalli — Frontend dashboard
-- Dhanush Goud Rekhala — Integration, deployment, monitoring & load testing
