@@ -1,0 +1,93 @@
+GRIDPULSE - MILESTONE 3 VIDEO COMMANDS
+======================================
+Copy ONE line at a time and press Enter.
+Lines starting with # are notes - do not paste them.
+LAPTOP = Mac Terminal          VM = gridpulse-vm SSH window (browser)
+
+
+##########################################################
+#  A. BEFORE YOU HIT RECORD   (off camera)
+##########################################################
+
+# ---- LAPTOP (Mac Terminal) ----
+cd ~/Downloads/gridpulse
+docker compose down
+./deploy/allow_my_ip.sh
+
+# ---- VM (SSH window) - so the pull is visible on camera ----
+# (down keeps the database; image rm removes only our two images)
+cd ~/gridpulse
+docker compose down
+docker image rm us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-backend:v1 us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-frontend:v1
+
+# ---- Browser tabs to open in advance ----
+# 1) Artifact Registry - backend image:
+https://console.cloud.google.com/artifacts/docker/gridpulse-509202/us-central1/gridpulse/gridpulse-backend?project=gridpulse-509202
+# 2) Artifact Registry - frontend image:
+https://console.cloud.google.com/artifacts/docker/gridpulse-509202/us-central1/gridpulse/gridpulse-frontend?project=gridpulse-509202
+#    (in each, click the digest row to open the page showing "Tags: latest, v1")
+# 3) VM instances (SSH button):
+https://console.cloud.google.com/compute/instances?project=gridpulse-509202
+# 4) Budgets:   console search bar -> "Budgets & alerts" -> click your $50 budget
+# 5) Billing:   console search bar -> "Billing" -> Overview (current month)
+
+
+##########################################################
+#  B. LIVE IN THE VIDEO
+##########################################################
+
+# ---------- B1 | 1:45 | Person 1 | LAPTOP: docker compose up ----------
+cd ~/Downloads/gridpulse
+docker compose up -d --wait
+docker compose ps
+#   expect: db, backend, frontend all (healthy); db shows only 5432/tcp
+#   then open in the browser:
+http://localhost
+http://localhost:8000/docs
+
+
+# ---------- B2 | 5:15 | Person 2 | LAPTOP: show the laptop's digest ----------
+#   (after showing the two Artifact Registry pages)
+docker image inspect --format '{{index .RepoDigests 0}}' us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-backend:v1
+#   expect: ...gridpulse-backend@sha256:687b32e25721f1a3e17cd6e440c5ef572e7f688b2c5feda1b688ee78312f8630
+
+
+# ---------- B3 | 5:45 | Person 3 | VM (SSH window): pull and run ----------
+docker image ls
+#   expect: no gridpulse images listed yet
+cd ~/gridpulse
+./deploy/vm_deploy.sh
+#   expect (takes about a minute):
+#     layers downloading -> db, backend, frontend Healthy
+#     backend  digest sha256:687b32e25721...   (same as the laptop)
+#     frontend digest sha256:403816f230e6...
+#     Health: {"status":"ok","database":"ok"}
+#   then open in the browser:
+http://35.184.90.182
+http://35.184.90.182:8000/docs
+
+
+##########################################################
+#  C. IF SOMETHING GOES WRONG
+##########################################################
+
+# VM page will not load in the browser -> run on the LAPTOP, wait 10 s, reload:
+./deploy/allow_my_ip.sh
+
+# A container shows "unhealthy" -> see why (works on laptop or VM):
+docker compose logs --tail=50 backend
+
+# vm_deploy.sh says ports 80/8000 are in use (VM) -> stop leftovers, retry:
+docker compose down
+./deploy/vm_deploy.sh
+
+# Laptop: "port is already allocated" -> stop the old stack, retry B1:
+docker compose down
+
+
+##########################################################
+#  D. AFTER RECORDING (optional, saves free-trial credit)
+##########################################################
+# The app must stay up until grading is done. Only stop the VM after that.
+# The IP is reserved as static, so the URL will not change when it restarts.
+# gcloud compute instances stop gridpulse-vm --zone us-central1-a
