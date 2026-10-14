@@ -1,29 +1,23 @@
 #!/usr/bin/env bash
 # VM: pull the exact images that were pushed from the laptop and run them.
 # Nothing is built here (--no-build): no pip, no npm, no model training.
+# Milestone 4: no .env is needed or read - all config is in docker-compose.yml
+# and the DB password comes from Secret Manager at runtime.
 #
-#   ./deploy/vm_deploy.sh          # runs v1 (or IMAGE_TAG from .env)
+#   ./deploy/vm_deploy.sh          # runs v2
+#   ./deploy/vm_deploy.sh v3       # a later release
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-[ -f .env ] || { echo "Missing .env -> run: cp .env.example .env  (then set POSTGRES_PASSWORD)"; exit 1; }
-
-getenv() { grep -E "^$1=" .env | cut -d= -f2- || true; }
-REGISTRY="$(getenv REGISTRY)";        REGISTRY="${REGISTRY:-us-central1-docker.pkg.dev/gridpulse-509202/gridpulse}"
-IMAGE_TAG="$(getenv IMAGE_TAG)";      IMAGE_TAG="${IMAGE_TAG:-v1}"
-FRONTEND_PORT="$(getenv FRONTEND_PORT)"; FRONTEND_PORT="${FRONTEND_PORT:-80}"
+export IMAGE_TAG="${1:-${IMAGE_TAG:-v2}}"
+REGISTRY="${REGISTRY:-us-central1-docker.pkg.dev/gridpulse-509202/gridpulse}"
+FRONTEND_PORT="${FRONTEND_PORT:-80}"
 PORT_SUFFIX=""; [ "$FRONTEND_PORT" = "80" ] || PORT_SUFFIX=":${FRONTEND_PORT}"
 
-# Milestone 2's hand-started processes must not still be holding the ports.
-if sudo ss -ltnp | grep -E ":(${FRONTEND_PORT}|8000)\s" | grep -v docker-proxy; then
-  echo
-  echo "Ports ${FRONTEND_PORT}/8000 are still held by the Milestone 2 processes listed above."
-  echo "Stop them first (RUNBOOK step 5.2), then re-run this script."
-  exit 1
-fi
+[ ! -f .env ] || { echo "A .env file exists in $(pwd) - Milestone 4 must not use one. Delete it first."; exit 1; }
 
 docker compose pull
-docker compose up -d --no-build --wait
+docker compose up -d --no-build --remove-orphans --wait
 docker compose ps
 
 echo

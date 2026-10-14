@@ -1,6 +1,7 @@
--- GridPulse relational schema (matches backend/app/models exactly).
--- This is provided for reference/manual setup; the FastAPI app also
--- creates these tables automatically on startup via SQLAlchemy metadata.
+-- GridPulse relational schema - REFERENCE COPY ONLY.
+-- Milestone 4: the tables are created by the Alembic migration
+--   backend/migrations/versions/0001_initial_schema.py   (alembic upgrade head)
+-- which is the source of truth. The app no longer creates tables itself.
 
 CREATE TABLE IF NOT EXISTS regions (
     id SERIAL PRIMARY KEY,

@@ -11,7 +11,12 @@ data - clearly labeled here and in the README). Produces:
     synthetic model, mimicking real AC-driven demand)
 
 Run with:  python scripts/seed_database.py
-(from the backend/ virtualenv, with DATABASE_URL configured)
+(from the backend/ virtualenv, with DATABASE_URL configured, AFTER
+`alembic upgrade head` has created the tables - Milestone 4 no longer
+creates tables from application code).
+
+In the cloud this script is NOT run: Cloud SQL received the Milestone 3
+data via deploy/m4/vm_migrate.sh instead (SEED_DEMO_DATA=false).
 """
 import math
 import random
@@ -27,7 +32,7 @@ for _candidate in (_here.parent / "backend", Path("/app")):
 else:
     raise SystemExit("Could not locate backend/app - check your setup.")
 
-from app.database import Base, engine, SessionLocal  # noqa: E402
+from app.database import SessionLocal  # noqa: E402
 from app.models import Region, HourlyReading, WeatherObservation  # noqa: E402
 
 random.seed(42)
@@ -101,7 +106,6 @@ def synthetic_weather(ts: datetime, region_name: str) -> dict:
 
 
 def main():
-    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
 
     try:

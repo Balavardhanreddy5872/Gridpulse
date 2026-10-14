@@ -6,6 +6,8 @@ faithful enough substitute for schema/endpoint tests. Env vars must be
 set BEFORE importing anything under app/, since app.config.Settings
 reads them at import time.
 
+In production the tables come from the Alembic migration; here SQLite gets
+them from create_all() (test_migration.py checks the two agree).
 Tables are created once per session, then wiped before every individual
 test (not after) so each test starts from a known-empty state regardless
 of what ran before it or in what order - this matters here because
@@ -18,7 +20,11 @@ from pathlib import Path
 
 TEST_DB_PATH = Path(__file__).resolve().parent / "test_gridpulse.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{TEST_DB_PATH}"
+os.environ["STORAGE_BACKEND"] = "local"
 os.environ["UPLOAD_DIRECTORY"] = str(Path(__file__).resolve().parent / "test_uploads")
+# make sure no cloud setting leaks in from the developer's shell
+for _var in ("DB_PASSWORD_SECRET", "CLOUDSQL_INSTANCE", "DB_HOST", "GCS_BUCKET"):
+    os.environ.pop(_var, None)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 

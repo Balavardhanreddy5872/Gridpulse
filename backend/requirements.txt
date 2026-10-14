@@ -12,3 +12,7 @@ pandas==2.2.2
 xgboost==3.0.0
 scikit-learn==1.5.2
 joblib==1.4.2
+# --- Milestone 4: managed state ---
+alembic==1.13.3                      # versioned schema migrations (creates the tables)
+google-cloud-storage==2.18.2         # uploaded PDFs -> Cloud Storage bucket
+google-cloud-secret-manager==2.20.2  # DB password -> read at runtime, never in .env

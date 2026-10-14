@@ -11,7 +11,7 @@ stored so a human can verify.
 """
 import re
 from datetime import datetime
-from typing import Optional
+from typing import BinaryIO, Optional, Union
 
 import pdfplumber
 
@@ -23,9 +23,11 @@ DATE_PATTERN = re.compile(
 )
 
 
-def extract_text(filepath: str) -> str:
+def extract_text(source: Union[str, BinaryIO]) -> str:
+    """source: a file path, or an in-memory file object (io.BytesIO) - the
+    upload endpoint passes the bytes directly so nothing touches local disk."""
     text_chunks = []
-    with pdfplumber.open(filepath) as pdf:
+    with pdfplumber.open(source) as pdf:
         for page in pdf.pages:
             page_text = page.extract_text() or ""
             text_chunks.append(page_text)

@@ -1,21 +1,33 @@
 # GridPulse — Smart Grid Load Forecasting & Peak-Risk Alerting
 
-`docker compose up --build`
-runs the whole stack (Postgres + FastAPI + React/nginx); the same versioned
-images are pushed to Google Artifact Registry and pulled onto the course VM.
-The original native (no-Docker) setup in §2–3 still works for development.
+**Milestone 4 (current): the VM holds no state.**
 
-## 0. Run with Docker
+| State | Milestone 3 (on the VM) | Milestone 4 (managed service) |
+|---|---|---|
+| Database | `postgres:16` container + `pgdata` volume | **Cloud SQL for PostgreSQL 16**, private IP only |
+| Uploaded PDFs | `uploads` Docker volume | **Cloud Storage** bucket `gridpulse-509202-uploads` |
+| DB password | `.env` file on the VM | **Secret Manager** `gridpulse-db-password` |
+| Schema | `create_all()` at app start | **Alembic migration** `backend/migrations/versions/0001_initial_schema.py` |
+| Identity | default compute SA (Editor) | **`gridpulse-vm-sa`**, least privilege, no key files |
 
+Step-by-step: **[docs/milestone4/RUNBOOK.md](docs/milestone4/RUNBOOK.md)** ·
+Milestone 3: [docs/milestone3/RUNBOOK.md](docs/milestone3/RUNBOOK.md)
+
+## 0. Run it
+
+**On the VM** (cloud, no `.env`):
 ```bash
-cp .env.example .env        # set POSTGRES_PASSWORD
-docker compose up --build
+docker compose pull && docker compose up -d --no-build
+```
+
+**On a laptop** (local stand-ins: Postgres container + local folder):
+```bash
+cp .env.example .env        # local-only throwaway password
+docker compose -f docker-compose.local.yml up --build
 ```
 - Dashboard: **http://localhost** · API docs: **http://localhost:8000/docs**
-- The DB is seeded automatically on first start; the trained model is baked
-  into the backend image.
-- Push to Artifact Registry, deploy on the VM, verify no secrets, budget
-  steps: see **[docs/milestone3/RUNBOOK.md](docs/milestone3/RUNBOOK.md)**.
+- Tables are created by `alembic upgrade head` on container start; the demo
+  data is seeded only in local mode. The trained model is baked into the image.
 
 ## 1. What's included
 
@@ -53,9 +65,11 @@ the backend starts, polling `async_jobs` and processing several
 concurrently so the API stays responsive during a simulated spike.
 
 ### Tests
-16 pytest tests (`backend/tests/`) — health, regions, forecast (incl.
+26 pytest tests (`backend/tests/`) — health, regions, forecast (incl.
 naive-fallback), risk-engine thresholds, PDF upload/extraction, job
-creation/filtering.
+creation/filtering, plus Milestone 4: uploads go to the bucket (never local disk),
+DB URL built from Secret Manager + private IP, migration covers every ORM
+column, stale-job recovery.
 
 ### Docs
 - `docs/gridpulse_milestone1.pptx` — the 2-slide deck.
@@ -90,7 +104,8 @@ cd backend
 python3 -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-cp ../.env.example .env         # already points at the role/db created above
+set -a; source ../.env.example; set +a   # the app reads env vars only, never a .env file
+alembic upgrade head                      # creates the tables (Milestone 4)
 uvicorn app.main:app --reload
 ```
 Leave this running. Check **http://localhost:8000/docs** for the interactive API.
@@ -155,4 +170,5 @@ tests specifically.)
 | — | Amazon CloudWatch for monitoring |
 
 **Containerization** (Dockerfile / docker-compose.yml) is done in Milestone 3 —
-see §0 and `docs/milestone3/RUNBOOK.md`.
+see `docs/milestone3/RUNBOOK.md`. **Managed state** (Cloud SQL, Cloud Storage,
+Secret Manager) is Milestone 4 — see `docs/milestone4/RUNBOOK.md`.

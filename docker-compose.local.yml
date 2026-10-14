@@ -1,0 +1,80 @@
+# GridPulse - LOCAL DEVELOPMENT on a laptop (not used on the VM).
+#
+#   cp .env.example .env          # local-only throwaway DB password
+#   docker compose -f docker-compose.local.yml up --build
+#   -> http://localhost  (dashboard)   http://localhost:8000/docs  (API)
+#
+# Same backend/frontend code as the cloud, but with stand-ins for the managed
+# services (Cloud SQL and Cloud Storage are not reachable from a laptop - the
+# database only has a private IP inside the VPC):
+#   database -> a local postgres:16 container   (DATABASE_URL)
+#   uploads  -> a local Docker volume           (STORAGE_BACKEND=local)
+# Tables are still created by the Alembic migration (backend/start.sh), and
+# the synthetic demo data is loaded into the empty local DB.
+# Separate project name => separate volumes from the Milestone 3 stack.
+
+name: gridpulse-local
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gridpulse}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (copy .env.example)}
+      POSTGRES_DB: ${POSTGRES_DB:-gridpulse}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - data-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: gridpulse-backend:local
+    platform: linux/amd64
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-gridpulse}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-gridpulse}
+      STORAGE_BACKEND: local
+      SEED_DEMO_DATA: "true"
+      CORS_ORIGINS: http://localhost,http://127.0.0.1
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - data-net
+      - web-net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    image: gridpulse-frontend:local
+    platform: linux/amd64
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - web-net
+
+volumes:
+  pgdata:
+  uploads:
+
+networks:
+  web-net:
+  data-net:

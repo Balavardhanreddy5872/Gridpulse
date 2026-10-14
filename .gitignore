@@ -1,9 +1,20 @@
-# secrets
+# secrets (any .env variant, including backups like .env.m3.bak)
 .env
-backend/.env
-frontend/.env
+.env.*
+**/.env
+**/.env.*
 *.env
+!.env.example
+!**/.env.example
 !*.env.example
+# service-account key files must never exist, let alone be committed
+*-key.json
+*credentials*.json
+service-account*.json
+
+# test artifacts
+backend/tests/test_uploads/
+backend/tests/test_gridpulse.db
 
 # python
 __pycache__/

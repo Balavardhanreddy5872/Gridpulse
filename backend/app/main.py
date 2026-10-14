@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -5,18 +6,28 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.database import Base, engine
-from app import models  # noqa: F401 - ensures models are registered before create_all
-from app.routers import health, regions, forecast, alerts, documents, jobs
+from app.database import engine
+from app import models  # noqa: F401 - registers the ORM models
+from app.routers import health, regions, forecast, alerts, documents, jobs, system
+from app.services.storage import get_storage
 from app.workers.spike_worker import start_worker
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s - %(message)s")
+logger = logging.getLogger("gridpulse")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # For a student local milestone, create_all is simpler and more reliable
-    # than a full migration tool. database/init.sql documents the same
-    # schema in raw SQL for anyone who wants to inspect/run it directly.
-    Base.metadata.create_all(bind=engine)
+    # Milestone 4: tables are created by the Alembic migration
+    # (backend/migrations/versions/0001_initial_schema.py, run by start.sh
+    # as `alembic upgrade head`), no longer by create_all() here.
+    logger.info("Database: %s", engine.url.render_as_string(hide_password=True))
+    logger.info("File storage: %s", get_storage().describe())
+    if settings.uses_cloud_database or settings.STORAGE_BACKEND == "gcs":
+        from app import gcp
+
+        who = gcp.whoami()
+        logger.info("Google Cloud identity: %s (via %s)", who["identity"], who["source"])
 
     worker_task = start_worker()
     try:
@@ -28,7 +39,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="GridPulse API",
     description="Smart Grid Load Forecasting & Peak-Risk Alerting Platform",
-    version="0.3.0-stage3",
+    version="0.4.0-milestone4",
     lifespan=lifespan,
 )
 
@@ -57,6 +68,7 @@ app.include_router(forecast.router)
 app.include_router(alerts.router)
 app.include_router(documents.router)
 app.include_router(jobs.router)
+app.include_router(system.router)
 
 
 @app.get("/")
