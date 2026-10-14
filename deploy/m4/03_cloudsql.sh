@@ -25,7 +25,7 @@ else
     --database-version=POSTGRES_16 \
     --edition=enterprise \
     --tier="$SQL_TIER" \
-    --region="$REGION" --zone="$ZONE" \
+    --zone="$ZONE" \
     --availability-type=zonal \
     --storage-type=SSD --storage-size=10GB --storage-auto-increase \
     --network="projects/${PROJECT_ID}/global/networks/${NETWORK}" \

@@ -1,0 +1,16 @@
+GridPulse Milestone 4 - row counts before and after the database move
+Taken: 2026-10-14 19:54:46 UTC on gridpulse-vm
+OLD = Milestone 3 Postgres container 'gridpulse-db-1' on gridpulse-vm (Docker volume gridpulse_pgdata)
+NEW = Cloud SQL instance 'gridpulse-db', private IP 10.60.0.3, PostgreSQL 16.15
+checksum = md5 of every row in the table (ordered by id); equal checksums = identical contents
+
+TABLE                          OLD ROWS     NEW ROWS   OLD CHECKSUM   NEW CHECKSUM   RESULT
+-----                          --------     --------   ------------   ------------   ------
+regions                              10           10   aaee5a0b2b7f   aaee5a0b2b7f   MATCH
+hourly_readings                    7200         7200   b8dc30a60cef   b8dc30a60cef   MATCH
+weather_observations               7200         7200   ae8d8eb57e50   ae8d8eb57e50   MATCH
+forecast_results                     48           48   c23c5a04ada2   c23c5a04ada2   MATCH
+peak_alerts                           7            7   22399ddc63be   22399ddc63be   MATCH
+infrastructure_documents              0            0   -              -              MATCH
+async_jobs                            0            0   -              -              MATCH
+TOTAL                             14465        14465                                 ALL 7 TABLES MATCH
