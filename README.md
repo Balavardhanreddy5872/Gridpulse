@@ -10,9 +10,6 @@
 | Schema | `create_all()` at app start | **Alembic migration** `backend/migrations/versions/0001_initial_schema.py` |
 | Identity | default compute SA (Editor) | **`gridpulse-vm-sa`**, least privilege, no key files |
 
-Step-by-step: **[docs/milestone4/RUNBOOK.md](docs/milestone4/RUNBOOK.md)** ·
-Milestone 3: [docs/milestone3/RUNBOOK.md](docs/milestone3/RUNBOOK.md)
-
 ## 0. Run it
 
 **On the VM** (cloud, no `.env`):
@@ -73,7 +70,6 @@ column, stale-job recovery.
 
 ### Docs
 - `docs/gridpulse_milestone1.pptx` — the 2-slide deck.
-- `docs/demo_script.md` — 10-minute video script.
 
 ## 2. What you need installed (one-time, native — no Docker)
 
@@ -169,6 +165,5 @@ tests specifically.)
 | `async_jobs` table + asyncio worker | Amazon SQS + Lambda/ECS worker |
 | — | Amazon CloudWatch for monitoring |
 
-**Containerization** (Dockerfile / docker-compose.yml) is done in Milestone 3 —
-see `docs/milestone3/RUNBOOK.md`. **Managed state** (Cloud SQL, Cloud Storage,
-Secret Manager) is Milestone 4 — see `docs/milestone4/RUNBOOK.md`.
+**Containerization** (Dockerfile / docker-compose.yml) is done in Milestone 3. **Managed state** (Cloud SQL, Cloud Storage,
+Secret Manager) is Milestone 4.

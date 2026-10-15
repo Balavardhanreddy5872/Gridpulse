@@ -39,3 +39,11 @@ uploads/*
 # archives (a repo tarball can contain .env files)
 *.tar.gz
 *.zip
+
+# Personal working docs - kept on the laptop, never pushed
+# (video scripts, runbooks/steps/troubleshooting, written analyses)
+docs/**/demo_script.md
+docs/**/RUNBOOK.md
+docs/**/*Video_Script*
+docs/**/*Video_Commands*
+docs/**/*Written_Analysis*
