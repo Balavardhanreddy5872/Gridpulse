@@ -78,8 +78,10 @@ RUN mkdir -p /app/uploads && chown app:app /app/uploads
 USER app
 EXPOSE 8000
 
+# Docker-only health check (docker compose). Kubernetes ignores HEALTHCHECK and
+# uses the liveness/readiness/startup probes in k8s/backend-deployment.yaml.
 HEALTHCHECK --interval=10s --timeout=5s --start-period=90s --retries=6 \
-  CMD python -c "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4).status == 200 else 1)"
+  CMD python -c "import sys,urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health/live', timeout=4).status == 200 else 1)"
 
 # On start (backend/start.sh): `alembic upgrade head`, optionally seed demo
 # data (local dev only), then exec uvicorn as PID 1.

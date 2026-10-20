@@ -3,9 +3,11 @@ Google Cloud helpers: Secret Manager, the Cloud SQL private-IP lookup, and
 "which identity am I running as?".
 
 Everything here authenticates with Application Default Credentials. On the
-VM that means the metadata server hands out short-lived tokens for the VM's
-attached service account (gridpulse-vm-sa). There is no key file anywhere:
-not in the image, not on the VM, not in git.
+VM (Milestone 4) the metadata server hands out short-lived tokens for the VM's
+attached service account (gridpulse-vm-sa). On GKE (Milestone 5) the GKE
+metadata server does the same for the pod's Kubernetes service account, which
+Workload Identity maps to gridpulse-gke-app. There is no key file anywhere:
+not in the image, not on the node, not in git.
 
 Also usable from the command line inside the backend image (the VM scripts
 use these so they authenticate exactly the way the app does):
@@ -20,6 +22,7 @@ import functools
 import logging
 import os
 import sys
+import time
 
 from app.config import settings
 
@@ -43,6 +46,24 @@ def project_id() -> str:
     return project
 
 
+def with_retries(fn, *args, what: str = "Google API call", attempts: int = 6, delay: float = 5.0):
+    """Call fn(*args), retrying a few times before giving up.
+
+    Milestone 5: on GKE the metadata server that hands out Workload Identity
+    tokens can need a few seconds after a pod starts before it answers. A
+    retry here turns that race into a short wait instead of a crashed
+    container and a CrashLoopBackOff."""
+    for attempt in range(1, attempts + 1):
+        try:
+            return fn(*args)
+        except Exception as exc:  # noqa: BLE001
+            if attempt == attempts:
+                raise
+            logger.warning("%s failed (%s), retrying in %.0fs (%d/%d)",
+                           what, exc.__class__.__name__, delay, attempt, attempts)
+            time.sleep(delay)
+
+
 def access_secret(name: str, version: str = "latest") -> str:
     """Return a secret's value from Secret Manager (kept in memory only)."""
     from google.cloud import secretmanager
@@ -54,8 +75,9 @@ def access_secret(name: str, version: str = "latest") -> str:
     except Exception as exc:  # noqa: BLE001 - re-raise with a hint students can act on
         raise RuntimeError(
             f"Could not read secret '{name}' from Secret Manager ({exc.__class__.__name__}: {exc}). "
-            "Check that the VM runs as gridpulse-vm-sa with the cloud-platform scope and that the "
-            "service account has roles/secretmanager.secretAccessor on this secret."
+            "Check the identity with `python -m app.gcp whoami` (VM: gridpulse-vm-sa with the "
+            "cloud-platform scope; GKE: gridpulse-gke-app via Workload Identity) and that it has "
+            "roles/secretmanager.secretAccessor on this secret."
         ) from exc
     return response.payload.data.decode("utf-8").strip()
 
@@ -97,6 +119,8 @@ def whoami() -> dict:
     kind = f"{type(credentials).__module__}.{type(credentials).__name__}"
     if key_file:
         source = f"key file {key_file}"
+    elif kind.startswith("google.auth.compute_engine") and os.environ.get("KUBERNETES_SERVICE_HOST"):
+        source = "GKE metadata server (Workload Identity, no key file)"
     elif kind.startswith("google.auth.compute_engine"):
         source = "VM metadata server (attached service account, no key file)"
     else:

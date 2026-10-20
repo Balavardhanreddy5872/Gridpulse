@@ -1,0 +1,20 @@
+# Apply everything in one go:   kubectl apply -k k8s/
+# (k8s/loadtest/ is NOT included - it is started only during the autoscaling demo.)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - serviceaccount.yaml
+  - backend-configmap.yaml
+  - backend-deployment.yaml
+  - backend-service.yaml
+  - backend-hpa.yaml
+  - backend-pdb.yaml
+  - frontend-deployment.yaml
+  - frontend-service.yaml
+  - frontend-hpa.yaml
+  - frontend-pdb.yaml
+  - lb-backendconfig.yaml
+  - https-redirect.yaml
+  - managed-certificate.yaml
+  - ingress.yaml

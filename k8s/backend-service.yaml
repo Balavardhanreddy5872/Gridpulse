@@ -1,0 +1,25 @@
+# Stable in-cluster address for the backend pods. The Ingress sends /api/* here.
+#  - cloud.google.com/neg: container-native load balancing - the Google load
+#    balancer sends traffic straight to pod IPs (no extra node hop) and only to
+#    pods that are Ready.
+#  - cloud.google.com/backend-config: the load balancer's own health check
+#    and timeouts (lb-backendconfig.yaml).
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: gridpulse
+  labels:
+    app: backend
+    app.kubernetes.io/part-of: gridpulse
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"default": "backend-lb"}'
+spec:
+  type: ClusterIP
+  selector:
+    app: backend
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

@@ -1,0 +1,49 @@
+# Settings for the Google load balancer's two backend services (one per
+# Kubernetes Service), attached by the cloud.google.com/backend-config
+# annotation on each Service.
+#
+# healthCheck: the load balancer's OWN health check, on top of the pods'
+#   readiness probes. For the backend it uses the readiness endpoint, so the
+#   load balancer and Kubernetes agree on which pods can serve.
+# connectionDraining: when a pod leaves, let its open requests finish for
+#   up to 20 s instead of cutting them off (pairs with the 15 s preStop sleep).
+# timeoutSec: forecast recompute can take several seconds (nginx allowed 120 s
+#   in Milestones 2-4; the load balancer's default is only 30 s).
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: backend-lb
+  namespace: gridpulse
+  labels:
+    app.kubernetes.io/part-of: gridpulse
+spec:
+  healthCheck:
+    type: HTTP
+    requestPath: /api/health/ready
+    port: 8000
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 3
+  connectionDraining:
+    drainingTimeoutSec: 20
+  timeoutSec: 120
+---
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: frontend-lb
+  namespace: gridpulse
+  labels:
+    app.kubernetes.io/part-of: gridpulse
+spec:
+  healthCheck:
+    type: HTTP
+    requestPath: /healthz
+    port: 80
+    checkIntervalSec: 10
+    timeoutSec: 5
+    healthyThreshold: 1
+    unhealthyThreshold: 3
+  connectionDraining:
+    drainingTimeoutSec: 20

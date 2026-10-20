@@ -1,0 +1,47 @@
+# The public entry point: a Google external Application Load Balancer (classic,
+# global), which GKE's Ingress controller creates and keeps in sync with this file.
+#
+#   https://<domain>/api/*  -> Service backend:8000  -> backend pods  -> Cloud SQL / Cloud Storage
+#   https://<domain>/*      -> Service frontend:80   -> nginx pods (the dashboard)
+#   http://<domain>/*       -> 301 to https://        (https-redirect.yaml)
+#
+# Annotations:
+#   ingress.class gce                 GKE's built-in Ingress controller (Google Cloud load balancer)
+#   global-static-ip-name             the reserved IP the DNS name points at (gridpulse-gke-ip)
+#   managed-certificates              Google-managed TLS certificate (managed-certificate.yaml)
+#   FrontendConfig                    http -> https redirect
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gridpulse
+  namespace: gridpulse
+  labels:
+    app.kubernetes.io/part-of: gridpulse
+  annotations:
+    kubernetes.io/ingress.class: "gce"
+    kubernetes.io/ingress.global-static-ip-name: gridpulse-gke-ip
+    networking.gke.io/managed-certificates: gridpulse-cert
+    networking.gke.io/v1beta1.FrontendConfig: https-redirect
+spec:
+  defaultBackend:
+    service:
+      name: frontend
+      port:
+        number: 80
+  rules:
+    - http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

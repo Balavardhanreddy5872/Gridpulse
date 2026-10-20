@@ -46,3 +46,31 @@ def test_explicit_db_host_skips_lookup(monkeypatch):
 
 def test_settings_never_read_a_dotenv_file():
     assert settings.model_config.get("env_file") is None
+
+
+def test_google_calls_are_retried_while_the_metadata_server_warms_up(monkeypatch):
+    """Milestone 5: a brand-new GKE pod can ask for a token before the GKE
+    metadata server is ready; the first calls fail, then succeed."""
+    monkeypatch.setattr(gcp.time, "sleep", lambda seconds: None)
+    attempts = {"n": 0}
+
+    def flaky():
+        attempts["n"] += 1
+        if attempts["n"] < 3:
+            raise ConnectionError("metadata server not ready")
+        return "ok"
+
+    assert gcp.with_retries(flaky, what="test") == "ok"
+    assert attempts["n"] == 3
+
+
+def test_retries_give_up_eventually(monkeypatch):
+    import pytest
+
+    monkeypatch.setattr(gcp.time, "sleep", lambda seconds: None)
+
+    def always_denied():
+        raise PermissionError("403")
+
+    with pytest.raises(PermissionError):
+        gcp.with_retries(always_denied, what="test", attempts=3)

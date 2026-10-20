@@ -18,8 +18,11 @@ router = APIRouter(tags=["documents"])
 ALLOWED_EXTENSIONS = {".pdf"}
 
 
+# A plain `def` (not `async def`): FastAPI then runs it in a worker thread, so
+# the database calls, the upload to Cloud Storage and the PDF text extraction
+# never block the event loop that answers the other requests and the probes.
 @router.post("/api/documents/upload", response_model=InfrastructureDocumentOut)
-async def upload_document(
+def upload_document(
     region_id: int = Form(...),
     capacity_impact_mw: float | None = Form(None),
     start_date: str | None = Form(None),
@@ -36,7 +39,7 @@ async def upload_document(
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail="Only PDF files are accepted")
 
-    contents = await file.read()
+    contents = file.file.read()
     max_bytes = settings.MAX_UPLOAD_MB * 1024 * 1024
     if len(contents) > max_bytes:
         raise HTTPException(status_code=400, detail=f"File exceeds {settings.MAX_UPLOAD_MB}MB limit")

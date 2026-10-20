@@ -20,6 +20,8 @@ import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import update
+
 from app.config import settings
 from app.database import SessionLocal
 from app.models import AsyncJob, Region
@@ -37,12 +39,9 @@ async def _process_job(job_id: int):
     def _work():
         db = SessionLocal()
         try:
+            if not claim_job(db, job_id):
+                return  # another replica (or poll cycle) got it first, or it's gone
             job = db.get(AsyncJob, job_id)
-            if not job or job.status != "queued":
-                return  # picked up by another poll cycle already, or gone
-            job.status = "processing"
-            job.started_at = datetime.now(timezone.utc)
-            db.commit()
 
             region = db.get(Region, job.region_id) if job.region_id else None
             if region is None:
@@ -67,6 +66,25 @@ async def _process_job(job_id: int):
             db.close()
 
     await asyncio.to_thread(_work)
+
+
+def claim_job(db, job_id: int) -> bool:
+    """Milestone 5: atomically move ONE job from queued to processing.
+
+    Every backend replica runs this worker against the same Cloud SQL queue,
+    so two pods can see the same queued row in the same poll cycle. A single
+    conditional UPDATE decides the winner: Postgres row-locks the row, the
+    second UPDATE re-checks `status = 'queued'` after the first commits, finds
+    'processing', and changes 0 rows - so each job runs exactly once no matter
+    how many replicas the autoscaler adds."""
+    result = db.execute(
+        update(AsyncJob)
+        .where(AsyncJob.id == job_id, AsyncJob.status == "queued")
+        .values(status="processing", started_at=datetime.now(timezone.utc))
+        .execution_options(synchronize_session=False)
+    )
+    db.commit()
+    return result.rowcount == 1
 
 
 def requeue_stale_jobs() -> int:
@@ -101,6 +119,26 @@ async def _requeue_stale_jobs_safely():
         logger.exception("Could not re-queue stale jobs")
 
 
+def queued_job_ids() -> list[int]:
+    """The oldest queued jobs (ids only). Runs in a worker THREAD, never on the
+    event loop: waiting for a pooled DB connection here used to freeze the whole
+    process - every request and every health probe - for up to DB_POOL_TIMEOUT
+    seconds whenever the pod was busy (Milestone 5 load test: liveness probe
+    timeouts, restarted pods, 30 s with no answer)."""
+    db = SessionLocal()
+    try:
+        return [
+            job_id for (job_id,) in
+            db.query(AsyncJob.id)
+            .filter(AsyncJob.status == "queued")
+            .order_by(AsyncJob.created_at)
+            .limit(MAX_CONCURRENT_JOBS)
+            .all()
+        ]
+    finally:
+        db.close()
+
+
 async def _poll_loop():
     # Checked at start-up AND every minute: a replacement VM may come up
     # before an orphaned job has been "processing" for STALE_JOB_MINUTES.
@@ -110,19 +148,7 @@ async def _poll_loop():
                 POLL_INTERVAL_SECONDS, MAX_CONCURRENT_JOBS)
     while True:
         try:
-            db = SessionLocal()
-            try:
-                queued_ids = [
-                    j.id for j in
-                    db.query(AsyncJob)
-                    .filter(AsyncJob.status == "queued")
-                    .order_by(AsyncJob.created_at)
-                    .limit(MAX_CONCURRENT_JOBS)
-                    .all()
-                ]
-            finally:
-                db.close()
-
+            queued_ids = await asyncio.to_thread(queued_job_ids)
             if queued_ids:
                 await asyncio.gather(*(_process_job(jid) for jid in queued_ids))
         except Exception:  # noqa: BLE001 - the poll loop itself must never die

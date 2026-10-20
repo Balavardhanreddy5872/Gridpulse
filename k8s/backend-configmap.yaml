@@ -1,0 +1,29 @@
+# Plain, non-secret backend settings (same values the Milestone 4 VM used).
+# The DB password is NOT here: DB_PASSWORD_SECRET is the secret's NAME and the
+# app reads its value from Secret Manager at start-up.
+# After changing this file: kubectl apply -k k8s/ && kubectl -n gridpulse rollout restart deploy/backend
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: gridpulse
+  labels:
+    app.kubernetes.io/part-of: gridpulse
+data:
+  GCP_PROJECT: gridpulse-509202
+  CLOUDSQL_INSTANCE: gridpulse-db          # private IP looked up at start-up
+  DB_NAME: gridpulse
+  DB_USER: gridpulse
+  DB_PASSWORD_SECRET: gridpulse-db-password
+  DB_SSLMODE: require
+  STORAGE_BACKEND: gcs
+  GCS_BUCKET: gridpulse-509202-uploads
+  SEED_DEMO_DATA: "false"
+  # Every replica has its own pool: 2 + 1 overflow + 1 for the readiness probe
+  # = 4 connections per pod. HPA max 4 pods (+1 during a rollout) = 20, under
+  # the 25-connection limit of Cloud SQL db-f1-micro.
+  DB_POOL_SIZE: "2"
+  DB_MAX_OVERFLOW: "1"
+  # At most 4 requests worked on at once per pod; the rest queue briefly.
+  REQUEST_THREADS: "4"
+  CORS_ORIGINS: "https://gridpulse-9.duckdns.org"  # DOMAIN

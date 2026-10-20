@@ -1,6 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
+import anyio.to_thread
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -21,6 +22,9 @@ async def lifespan(app: FastAPI):
     # Milestone 4: tables are created by the Alembic migration
     # (backend/migrations/versions/0001_initial_schema.py, run by start.sh
     # as `alembic upgrade head`), no longer by create_all() here.
+    # Milestone 5: cap concurrent requests per pod (see config.REQUEST_THREADS).
+    anyio.to_thread.current_default_thread_limiter().total_tokens = settings.REQUEST_THREADS
+    logger.info("Request threads per pod: %d", settings.REQUEST_THREADS)
     logger.info("Database: %s", engine.url.render_as_string(hide_password=True))
     logger.info("File storage: %s", get_storage().describe())
     if settings.uses_cloud_database or settings.STORAGE_BACKEND == "gcs":
@@ -39,7 +43,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="GridPulse API",
     description="Smart Grid Load Forecasting & Peak-Risk Alerting Platform",
-    version="0.4.0-milestone4",
+    version="0.5.0-milestone5",
     lifespan=lifespan,
 )
 

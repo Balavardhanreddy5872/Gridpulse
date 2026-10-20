@@ -1,0 +1,15 @@
+# At most one dashboard pod may be voluntarily evicted at a time
+# (see backend-pdb.yaml for why).
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: frontend
+  namespace: gridpulse
+  labels:
+    app.kubernetes.io/part-of: gridpulse
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: frontend
+  unhealthyPodEvictionPolicy: AlwaysAllow

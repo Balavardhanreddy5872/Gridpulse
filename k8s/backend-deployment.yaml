@@ -1,0 +1,138 @@
+# GridPulse API (FastAPI + XGBoost model), image built and pushed by
+# deploy/build_and_push.sh v5.
+#
+# replicas is deliberately NOT set: the HorizontalPodAutoscaler
+# (backend-hpa.yaml) owns the replica count (2-4). Setting it here would reset
+# the count on every `kubectl apply`.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: gridpulse
+  labels:
+    app: backend
+    app.kubernetes.io/part-of: gridpulse
+spec:
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1         # start the new pod first...
+      maxUnavailable: 0   # ...and remove an old one only once the new one is Ready
+  template:
+    metadata:
+      labels:
+        app: backend
+        app.kubernetes.io/part-of: gridpulse
+    spec:
+      serviceAccountName: gridpulse-backend     # -> gridpulse-gke-app via Workload Identity
+      terminationGracePeriodSeconds: 45         # 15 s preStop + up to 20 s to finish requests
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      # Spread replicas over nodes (required) and zones (preferred), so one node
+      # or zone going away never takes every replica with it.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: backend
+        # HARD rule: never two backend pods on one node while another node has
+        # fewer. One node upgrade / failure can then only take out one replica.
+        # (Autopilot bills per pod, not per node, so the extra node is free.)
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: backend
+      containers:
+        - name: backend
+          image: us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-backend:v5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: backend-config
+          env:
+            # Which replica answered - shown by /api/health/* and /api/system/info
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          resources:
+            requests:            # what the autoscaler's 60 % target is measured against
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          # Start-up = Secret Manager read + Cloud SQL IP lookup + `alembic upgrade
+          # head` + importing pandas/XGBoost. Allow up to 3 minutes before liveness applies.
+          startupProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 36
+          # LIVENESS: is the process itself OK? No database involved, so a
+          # Cloud SQL blip can never trigger a restart of every replica at once.
+          # A restart only after ~1 minute without any answer: a pod that is
+          # merely busy (autoscaler about to add help) must not be killed.
+          livenessProbe:
+            httpGet:
+              path: /api/health/live
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
+          # READINESS: can it serve a real request? Runs SELECT 1 against Cloud SQL.
+          # Failing removes the pod from the Service / load balancer - no restart.
+          readinessProbe:
+            httpGet:
+              path: /api/health/ready
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 3        # ~15 s: a short CPU spike under load does not drop the pod
+            successThreshold: 1
+          lifecycle:
+            preStop:
+              # Keep serving for 15 s after Kubernetes decides to stop the pod,
+              # while the load balancer takes it out of rotation. Without this,
+              # requests already on their way to the pod get a 502.
+              exec:
+                command: ["sleep", "15"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true      # stateless: nothing is written to the container
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp                            # RAM-backed scratch space for request buffers
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi

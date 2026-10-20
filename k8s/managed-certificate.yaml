@@ -1,0 +1,15 @@
+# Google-managed TLS certificate for the app's hostname. Google obtains and
+# renews it automatically once the hostname's DNS A record points at the
+# Ingress's static IP (deploy/m5/03_static_ip_and_dns.sh). Provisioning takes
+# 15-60 minutes; `kubectl -n gridpulse describe managedcertificate gridpulse-cert`
+# shows Status: Active when it is done.
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: gridpulse-cert
+  namespace: gridpulse
+  labels:
+    app.kubernetes.io/part-of: gridpulse
+spec:
+  domains:
+    - gridpulse-9.duckdns.org  # DOMAIN

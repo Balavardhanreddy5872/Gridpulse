@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# LAPTOP: build both GridPulse images for linux/amd64 (the VM's CPU), push them
+# LAPTOP: build both GridPulse images for linux/amd64 (VM / GKE nodes), push them
 # to Artifact Registry with an explicit version tag + :latest, then print the
 # digests so you can compare them with the VM later.
 #
-#   ./deploy/build_and_push.sh v2       # Milestone 4 release (default)
+#   ./deploy/build_and_push.sh v5       # Milestone 5 release, run on GKE (default)
+#   (v3/v4 were earlier M5 builds: v5 keeps the event loop free of DB waits)
+#   ./deploy/build_and_push.sh v2       # Milestone 4 release (the VM)
 #
 # Builds from docker-compose.yml (the cloud stack). Needs no .env and never
 # reads one: the images contain no configuration secrets at all.
@@ -13,7 +15,7 @@ cd "$(dirname "$0")/.."
 PROJECT_ID="${PROJECT_ID:-gridpulse-509202}"
 REGION="${REGION:-us-central1}"
 REPO="${REPO:-gridpulse}"
-export IMAGE_TAG="${1:-v2}"
+export IMAGE_TAG="${1:-v5}"
 export REGISTRY="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO}"
 # One clean single-platform manifest per tag (no extra attestation entries).
 export BUILDX_NO_DEFAULT_ATTESTATIONS=1

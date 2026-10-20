@@ -1,0 +1,21 @@
+# Stable address for the nginx pods. The Ingress sends everything that is not
+# /api/* here. Container-native load balancing + LB health check as for the backend.
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: gridpulse
+  labels:
+    app: frontend
+    app.kubernetes.io/part-of: gridpulse
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"default": "frontend-lb"}'
+spec:
+  type: ClusterIP
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

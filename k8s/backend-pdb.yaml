@@ -1,0 +1,22 @@
+# PodDisruptionBudget: VOLUNTARY disruptions (node upgrades, Autopilot moving
+# pods to pack nodes, `kubectl drain`, cluster maintenance) may take down at
+# most ONE backend pod at a time. With at least 2 replicas, one is always
+# serving. Without this, both replicas can be evicted together and the load
+# balancer answers 502 until replacements are Ready.
+# (Deleting a pod by hand, or a crash, is not "voluntary" - the Deployment
+# handles that by starting a replacement.)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: backend
+  namespace: gridpulse
+  labels:
+    app.kubernetes.io/part-of: gridpulse
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: backend
+  # A pod that is already failing its readiness probe may still be evicted,
+  # so a broken pod can never block node maintenance.
+  unhealthyPodEvictionPolicy: AlwaysAllow

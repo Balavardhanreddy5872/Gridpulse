@@ -4,7 +4,12 @@ GET /api/system/info - where this running backend keeps its state.
 Handy for the Milestone 4 demo: shows the database server address as seen
 from Postgres itself (the Cloud SQL private IP), the storage bucket, the
 Google identity in use, and the applied migration - and never any secret.
+Milestone 5: also which replica (pod) and which GKE node answered, so the
+demo can show requests being spread across replicas.
 """
+import os
+import socket
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -19,6 +24,11 @@ router = APIRouter(tags=["system"])
 @router.get("/api/system/info")
 def system_info(db: Session = Depends(get_db)):
     info = {
+        "served_by": {
+            "pod": os.environ.get("POD_NAME") or socket.gethostname(),
+            "node": os.environ.get("NODE_NAME"),
+            "namespace": os.environ.get("POD_NAMESPACE"),
+        },
         "database": {"configured_via": "Secret Manager + Cloud SQL" if settings.uses_cloud_database else "DATABASE_URL"},
         "storage": {"backend": settings.STORAGE_BACKEND, "location": get_storage().describe()},
     }

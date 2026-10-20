@@ -1,6 +1,27 @@
 # GridPulse — Smart Grid Load Forecasting & Peak-Risk Alerting
 
-**Milestone 4 (current): the VM holds no state.**
+**Milestone 5 (current): Kubernetes runs the containers.** GridPulse runs on a
+GKE Autopilot cluster as self-healing, autoscaled replicas behind a Google
+load balancer with a Google-managed certificate.
+
+```
+https://<domain>  ->  external Application Load Balancer (static IP, managed cert, http->https 301)
+                  ->  Ingress gridpulse:  /api/*  -> Service backend:8000 -> backend pods  (HPA 2-4, PDB)
+                                          /*      -> Service frontend:80  -> nginx pods    (HPA 2-4, PDB)
+backend pods  ->  Cloud SQL (private IP, TLS)  ·  Cloud Storage bucket  ·  Secret Manager
+                  as gridpulse-gke-app via Workload Identity (no key files)
+```
+
+| What | Where |
+|---|---|
+| Manifests (Deployment, Service, Ingress, HPA, PodDisruptionBudget, …) | [`k8s/`](k8s/) — `kubectl apply -k k8s/` |
+| Liveness probe (process only, no DB) | `GET /api/health/live` |
+| Readiness probe (also `SELECT 1` on Cloud SQL, 2 s limit) | `GET /api/health/ready` |
+| Cluster, identity, IP/DNS, deploy, HTTPS scripts | [`deploy/m5/`](deploy/m5/) `01_…` → `06_…` |
+| Autoscaling load test | [`k8s/loadtest/load-generator.yaml`](k8s/loadtest/load-generator.yaml) |
+| Multi-replica safety | jobs are claimed with one atomic `UPDATE … WHERE status='queued'`; DB pools sized so 4 pods stay under Cloud SQL's connection limit; 4 request threads per pod so a busy pod still answers its probes |
+
+**Milestone 4: the VM holds no state.**
 
 | State | Milestone 3 (on the VM) | Milestone 4 (managed service) |
 |---|---|---|
@@ -62,11 +83,13 @@ the backend starts, polling `async_jobs` and processing several
 concurrently so the API stays responsive during a simulated spike.
 
 ### Tests
-26 pytest tests (`backend/tests/`) — health, regions, forecast (incl.
+38 pytest tests (`backend/tests/`) — health, regions, forecast (incl.
 naive-fallback), risk-engine thresholds, PDF upload/extraction, job
 creation/filtering, plus Milestone 4: uploads go to the bucket (never local disk),
 DB URL built from Secret Manager + private IP, migration covers every ORM
-column, stale-job recovery.
+column, stale-job recovery; and Milestone 5: a DB outage fails readiness but
+not liveness, readiness answers within its time limit, a job is claimed by
+only one replica, each pod caps its request threads, Google API calls retry while the GKE metadata server starts.
 
 ### Docs
 - `docs/gridpulse_milestone1.pptx` — the 2-slide deck.
@@ -166,4 +189,4 @@ tests specifically.)
 | — | Amazon CloudWatch for monitoring |
 
 **Containerization** (Dockerfile / docker-compose.yml) is done in Milestone 3. **Managed state** (Cloud SQL, Cloud Storage,
-Secret Manager) is Milestone 4.
+Secret Manager) is Milestone 4. **Orchestration** (GKE Autopilot, Ingress + managed HTTPS, HPA, PDB) is Milestone 5.

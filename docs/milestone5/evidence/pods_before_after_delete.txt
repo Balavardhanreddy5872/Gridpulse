@@ -1,0 +1,74 @@
+=== BEFORE  2026-10-20 10:16:19 CDT
+$ kubectl -n gridpulse get deploy backend
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+backend   2/2     2            2           12h
+
+$ kubectl -n gridpulse get pods -l app=backend -o wide
+NAME                       READY   STATUS    RESTARTS   AGE     IP           NODE                                     NOMINATED NODE   READINESS GATES
+backend-6f68859857-7k9vz   1/1     Running   0          4h57m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>           1/1
+backend-6f68859857-zrwg7   1/1     Running   0          4h58m   10.64.0.70   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>           1/1
+
+=== DELETE  10:16:20
+$ kubectl -n gridpulse delete pod backend-6f68859857-zrwg7
+pod "backend-6f68859857-zrwg7" deleted from gridpulse namespace
+
+=== WATCH (every 2 s until 2/2 Ready and backend-6f68859857-zrwg7 is gone)
+--- 10:16:23  (+3s)  ready 1/2
+backend-6f68859857-7k9vz   1/1   Running       0     4h57m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   0/1   Pending       0     4s      <none>       <none>                                   <none>   0/1
+backend-6f68859857-zrwg7   1/1   Terminating   0     4h58m   10.64.0.70   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+--- 10:16:27  (+7s)  ready 1/2
+backend-6f68859857-7k9vz   1/1   Running       0     4h57m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   0/1   Pending       0     7s      <none>       <none>                                   <none>   0/1
+backend-6f68859857-zrwg7   1/1   Terminating   0     4h58m   10.64.0.70   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+--- 10:16:30  (+10s)  ready 1/2
+backend-6f68859857-7k9vz   1/1   Running       0     4h57m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   0/1   Pending       0     11s     <none>       <none>                                   <none>   0/1
+backend-6f68859857-zrwg7   1/1   Terminating   0     4h58m   10.64.0.70   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+--- 10:16:34  (+14s)  ready 1/2
+backend-6f68859857-7k9vz   1/1   Running       0     4h57m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   0/1   Pending       0     15s     <none>       <none>                                   <none>   0/1
+backend-6f68859857-zrwg7   1/1   Terminating   0     4h58m   10.64.0.70   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+--- 10:16:38  (+18s)  ready 1/2
+backend-6f68859857-7k9vz   1/1   Running             0     4h57m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   0/1   ContainerCreating   0     18s     <none>       gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   0/1
+--- 10:16:41  (+21s)  ready 1/2
+backend-6f68859857-7k9vz   1/1   Running   0     4h57m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   0/1   Running   0     22s     10.64.0.86   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   0/1
+--- 10:16:45  (+25s)  ready 1/2
+backend-6f68859857-7k9vz   1/1   Running   0     4h57m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   0/1   Running   0     25s     10.64.0.86   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   0/1
+--- 10:16:48  (+28s)  ready 1/2
+backend-6f68859857-7k9vz   1/1   Running   0     4h57m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   0/1   Running   0     29s     10.64.0.86   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   0/1
+--- 10:16:52  (+32s)  ready 1/2
+backend-6f68859857-7k9vz   1/1   Running   0     4h57m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   0/1   Running   0     33s     10.64.0.86   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   0/1
+--- 10:16:56  (+36s)  ready 1/2
+backend-6f68859857-7k9vz   1/1   Running   0     4h57m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   0/1   Running   0     36s     10.64.0.86   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   0/1
+--- 10:16:59  (+39s)  ready 1/2
+backend-6f68859857-7k9vz   1/1   Running   0     4h58m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   1/1   Running   0     40s     10.64.0.86   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   0/1
+--- 10:17:03  (+43s)  ready 1/2
+backend-6f68859857-7k9vz   1/1   Running   0     4h58m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   1/1   Running   0     43s     10.64.0.86   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   0/1
+--- 10:17:06  (+46s)  ready 2/2
+backend-6f68859857-7k9vz   1/1   Running   0     4h58m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+backend-6f68859857-w8qcm   1/1   Running   0     47s     10.64.0.86   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>   1/1
+
+=== AFTER  2026-10-20 10:17:07 CDT  - replaced in 47 s
+$ kubectl -n gridpulse get deploy backend
+NAME      READY   UP-TO-DATE   AVAILABLE   AGE
+backend   2/2     2            2           12h
+
+$ kubectl -n gridpulse get pods -l app=backend -o wide
+NAME                       READY   STATUS    RESTARTS   AGE     IP           NODE                                     NOMINATED NODE   READINESS GATES
+backend-6f68859857-7k9vz   1/1     Running   0          4h58m   10.64.0.72   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>           1/1
+backend-6f68859857-w8qcm   1/1     Running   0          48s     10.64.0.86   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>           1/1
+
+$ kubectl -n gridpulse get events  (ReplicaSet created the replacement)
+2026-10-20T15:14:53Z   frontend-6d4b677cdf   SuccessfulDelete   Deleted pod: frontend-6d4b677cdf-xm7jp
+2026-10-20T15:14:54Z   frontend-5654c9df75   SuccessfulCreate   Created pod: frontend-5654c9df75-56vsq
+2026-10-20T15:15:19Z   frontend-6d4b677cdf   SuccessfulDelete   Deleted pod: frontend-6d4b677cdf-fgp7h
+2026-10-20T15:16:20Z   backend-6f68859857    SuccessfulCreate   Created pod: backend-6f68859857-w8qcm

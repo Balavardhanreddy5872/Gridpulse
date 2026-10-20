@@ -1,0 +1,83 @@
+# GridPulse dashboard: the React build served by nginx (image from
+# deploy/build_and_push.sh v5). The HPA (frontend-hpa.yaml) owns the replica
+# count (2-4), so replicas is not set here.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: gridpulse
+  labels:
+    app: frontend
+    app.kubernetes.io/part-of: gridpulse
+spec:
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: frontend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: frontend
+        app.kubernetes.io/part-of: gridpulse
+    spec:
+      automountServiceAccountToken: false     # nginx never talks to the Kubernetes API
+      terminationGracePeriodSeconds: 30
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: frontend
+        # HARD rule: never two frontend pods on one node while another node has
+        # fewer. One node upgrade / failure can then only take out one replica.
+        # (Autopilot bills per pod, not per node, so the extra node is free.)
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          nodeTaintsPolicy: Honor
+          labelSelector:
+            matchLabels:
+              app: frontend
+      containers:
+        - name: frontend
+          image: us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-frontend:v5
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 80
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          # nginx serves static files and has no downstream dependency, so
+          # "alive" and "ready" are the same cheap check here. The backend is
+          # where the two probes differ (backend-deployment.yaml).
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 2
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "15"]
+          securityContext:
+            allowPrivilegeEscalation: false

@@ -1,0 +1,7 @@
+# Everything GridPulse runs on GKE lives in this namespace.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gridpulse
+  labels:
+    app.kubernetes.io/part-of: gridpulse

@@ -1,0 +1,14 @@
+# FrontendConfig: the load balancer answers every plain http:// request with a
+# 301 redirect to the same URL on https://. Attached to the Ingress by the
+# networking.gke.io/v1beta1.FrontendConfig annotation.
+apiVersion: networking.gke.io/v1beta1
+kind: FrontendConfig
+metadata:
+  name: https-redirect
+  namespace: gridpulse
+  labels:
+    app.kubernetes.io/part-of: gridpulse
+spec:
+  redirectToHttps:
+    enabled: true
+    responseCodeName: MOVED_PERMANENTLY_DEFAULT   # 301

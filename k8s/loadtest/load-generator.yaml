@@ -1,0 +1,105 @@
+# Autoscaling demo: generates sustained traffic against the backend Service so
+# its CPU rises above the HPA target (60 %) and the replica count goes 2 -> 3 -> 4.
+#
+#   kubectl apply -f k8s/loadtest/load-generator.yaml     (deploy/m5/demo_autoscale.sh does this)
+#   kubectl -n gridpulse logs -f job/load-generator        requests/s and status codes every 10 s
+#   kubectl -n gridpulse delete job load-generator         stop early
+#
+# Uses the backend image itself (Python is already in it), so nothing is pulled
+# from Docker Hub. Every response code is counted, so the same log doubles as
+# proof that no request failed while pods were added or removed.
+# Every request opens a NEW connection ("Connection: close"): with keep-alive,
+# the 16 connections stay pinned to the 2 pods that existed when the test
+# started, and the pods the autoscaler adds would get no share of the load.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: load-generator
+  namespace: gridpulse
+  labels:
+    app: load-generator
+    app.kubernetes.io/part-of: gridpulse
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app: load-generator
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: load
+          image: us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-backend:v5
+          env:
+            - name: TARGET
+              value: http://backend.gridpulse.svc.cluster.local:8000
+            - name: PATHS
+              value: /api/regions,/api/alerts,/api/regions/1/readings?hours=72
+            - name: CONCURRENCY
+              value: "16"
+            - name: DURATION_SECONDS
+              value: "240"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          command: ["python", "-u", "-c"]
+          args:
+            - |
+              import collections, http.client, os, threading, time, urllib.parse
+
+              target = urllib.parse.urlsplit(os.environ["TARGET"])
+              paths = [p.strip() for p in os.environ["PATHS"].split(",") if p.strip()]
+              workers = int(os.environ["CONCURRENCY"])
+              duration = float(os.environ["DURATION_SECONDS"])
+              conn_cls = http.client.HTTPSConnection if target.scheme == "https" else http.client.HTTPConnection
+
+              counts = collections.Counter()
+              lock = threading.Lock()
+              stop_at = time.monotonic() + duration
+
+              def worker(n):
+                  conn, i = None, n
+                  while time.monotonic() < stop_at:
+                      path = paths[i % len(paths)]
+                      i += 1
+                      try:
+                          conn = conn_cls(target.hostname, target.port, timeout=30)
+                          conn.request("GET", path, headers={"Connection": "close"})
+                          response = conn.getresponse()
+                          response.read()
+                          key = str(response.status)
+                      except Exception as exc:
+                          key = "conn-error:" + exc.__class__.__name__
+                          time.sleep(0.2)
+                      finally:
+                          if conn is not None:
+                              conn.close()
+                          conn = None
+                      with lock:
+                          counts[key] += 1
+
+              print(f"load-generator: {workers} workers -> {os.environ['TARGET']} {paths} for {duration:.0f}s", flush=True)
+              threads = [threading.Thread(target=worker, args=(n,), daemon=True) for n in range(workers)]
+              for t in threads:
+                  t.start()
+              start, last_total = time.monotonic(), 0
+              while any(t.is_alive() for t in threads):
+                  time.sleep(10)
+                  with lock:
+                      snapshot = dict(counts)
+                  total = sum(snapshot.values())
+                  print(f"t={time.monotonic() - start:5.0f}s  total={total:7d}  "
+                        f"req/s={(total - last_total) / 10:6.1f}  codes={dict(sorted(snapshot.items()))}", flush=True)
+                  last_total = total
+              total = sum(counts.values())
+              failed = sum(v for k, v in counts.items() if not k.startswith("2"))
+              print(f"DONE: {total} requests, {failed} not 2xx, codes={dict(sorted(counts.items()))}", flush=True)
