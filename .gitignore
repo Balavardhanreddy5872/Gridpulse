@@ -47,3 +47,12 @@ docs/**/RUNBOOK.md
 docs/**/*Video_Script*
 docs/**/*Video_Commands*
 docs/**/*Written_Analysis*
+
+# Milestone submission material - submitted on Canvas / OneDrive, never pushed
+# (slides, written analyses, evidence files, screenshots, the whole M5 docs folder)
+docs/milestone5/
+docs/**/*.pptx
+docs/**/*.pdf
+docs/**/*.docx
+docs/**/evidence/
+docs/**/screenshots/
