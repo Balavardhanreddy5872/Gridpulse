@@ -1,4 +1,4 @@
-GridPulse on GKE - 2026-10-20 11:06:20 CDT
+GridPulse on GKE - 2026-10-20 11:07:32 CDT
 cluster gridpulse-gke (us-central1, Autopilot)   namespace gridpulse   https://gridpulse-9.duckdns.org
 
 [1m==> Deployments / HPAs / PDBs[0m
@@ -7,7 +7,7 @@ deployment.apps/backend    2/2     2            2           13h   backend      u
 deployment.apps/frontend   2/2     2            2           13h   frontend     us-central1-docker.pkg.dev/gridpulse-509202/gridpulse/gridpulse-frontend:v5   app=frontend
 
 NAME                                           REFERENCE             TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
-horizontalpodautoscaler.autoscaling/backend    Deployment/backend    cpu: 6%/60%   2         4         2          13h
+horizontalpodautoscaler.autoscaling/backend    Deployment/backend    cpu: 3%/60%   2         4         2          13h
 horizontalpodautoscaler.autoscaling/frontend   Deployment/frontend   cpu: 0%/70%   2         4         2          13h
 
 NAME                                  MIN AVAILABLE   MAX UNAVAILABLE   ALLOWED DISRUPTIONS   AGE
@@ -16,10 +16,10 @@ poddisruptionbudget.policy/frontend   N/A             1                 1       
 
 [1m==> Pods (node + zone of each replica)[0m
 NAME                       READY   STATUS    RESTARTS   AGE   IP           NODE                                     NOMINATED NODE   READINESS GATES   APP
-backend-868f8797c4-nx5nz   1/1     Running   0          14m   10.64.0.13   gk3-gridpulse-gke-pool-1-9790d2c4-tznl   <none>           1/1               backend
-backend-868f8797c4-zw255   1/1     Running   0          16m   10.64.0.94   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>           1/1               backend
-frontend-9dc8767d5-5kgfb   1/1     Running   0          17m   10.64.0.10   gk3-gridpulse-gke-pool-1-9790d2c4-tznl   <none>           1/1               frontend
-frontend-9dc8767d5-fppt4   1/1     Running   0          17m   10.64.0.11   gk3-gridpulse-gke-pool-1-9790d2c4-tznl   <none>           1/1               frontend
+backend-868f8797c4-nx5nz   1/1     Running   0          15m   10.64.0.13   gk3-gridpulse-gke-pool-1-9790d2c4-tznl   <none>           1/1               backend
+backend-868f8797c4-zw255   1/1     Running   0          18m   10.64.0.94   gk3-gridpulse-gke-pool-1-b6685988-92sb   <none>           1/1               backend
+frontend-9dc8767d5-5kgfb   1/1     Running   0          18m   10.64.0.10   gk3-gridpulse-gke-pool-1-9790d2c4-tznl   <none>           1/1               frontend
+frontend-9dc8767d5-fppt4   1/1     Running   0          18m   10.64.0.11   gk3-gridpulse-gke-pool-1-9790d2c4-tznl   <none>           1/1               frontend
     node gk3-gridpulse-gke-pool-1-9790d2c4-tznl                  zone us-central1-c
     node gk3-gridpulse-gke-pool-1-b6685988-92sb                  zone us-central1-b
 
@@ -85,4 +85,21 @@ mcrt-b98be404-e5d7-414f-b62b-a608309e073e  MANAGED  ACTIVE          gridpulse-9.
     }
 
 [1m==> Manifests committed to git[0m
-    WARNING: k8s/ has uncommitted changes - commit and push them
+    k8s/backend-configmap.yaml
+    k8s/backend-deployment.yaml
+    k8s/backend-hpa.yaml
+    k8s/backend-pdb.yaml
+    k8s/backend-service.yaml
+    k8s/frontend-deployment.yaml
+    k8s/frontend-hpa.yaml
+    k8s/frontend-pdb.yaml
+    k8s/frontend-service.yaml
+    k8s/https-redirect.yaml
+    k8s/ingress.yaml
+    k8s/kustomization.yaml
+    k8s/lb-backendconfig.yaml
+    k8s/loadtest/load-generator.yaml
+    k8s/managed-certificate.yaml
+    k8s/namespace.yaml
+    k8s/serviceaccount.yaml
+    last commit touching k8s/: d962612 Milestone 5: GKE - Deployments, Services, Ingress + HTTPS, HPA, PDB, health probes (16 seconds ago)
