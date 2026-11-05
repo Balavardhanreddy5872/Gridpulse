@@ -19,7 +19,7 @@ backend pods ──JSON logs──► Cloud Logging ──► log-based metric g
 | Log-based metric, dashboard, alert policies, uptime check | [`terraform/monitoring.tf`](terraform/monitoring.tf), [`terraform/dashboards/gridpulse.json`](terraform/dashboards/gridpulse.json) |
 | All cloud infrastructure + what is deliberately not in Terraform | [`terraform/`](terraform/) — [`terraform/README.md`](terraform/README.md) |
 | Pipeline | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) + [`deploy/ci/release.sh`](deploy/ci/release.sh) |
-| Setup + demo helpers | [`deploy/m6/`](deploy/m6/) `01_…` → `03_…`, `demo_5xx.sh`, `demo_bad_release.sh`, `show.sh` |
+| Setup helpers | [`deploy/m6/`](deploy/m6/) `01_…` → `03_…`, `show.sh`, `evidence.sh` |
 
 Since Milestone 6 the cluster is changed **only by the pipeline**: push to `main`
 instead of running `kubectl apply -k k8s/` by hand.

@@ -1,7 +1,7 @@
 # Autoscaling demo: generates sustained traffic against the backend Service so
 # its CPU rises above the HPA target (60 %) and the replica count goes 2 -> 3 -> 4.
 #
-#   kubectl apply -f k8s/loadtest/load-generator.yaml     (deploy/m5/demo_autoscale.sh does this)
+#   kubectl apply -f k8s/loadtest/load-generator.yaml     (the autoscaling demo does this)
 #   kubectl -n gridpulse logs -f job/load-generator        requests/s and status codes every 10 s
 #   kubectl -n gridpulse delete job load-generator         stop early
 #

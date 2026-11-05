@@ -28,6 +28,9 @@ terraform/notification.auto.tfvars
 # CI/CD render directory (deploy/ci/release.sh)
 .release/
 
+# Video demo helpers (deploy/m5/demo_*.sh, deploy/m6/demo_*.sh) - kept on the laptop, never pushed
+deploy/**/demo_*.sh
+
 # test artifacts
 backend/tests/test_uploads/
 backend/tests/test_gridpulse.db
