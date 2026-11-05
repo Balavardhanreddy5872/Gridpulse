@@ -36,7 +36,15 @@ RUN_URL="${GITHUB_SERVER_URL:-https://github.com}/${GITHUB_REPOSITORY:-local}/ac
 k()       { kubectl --namespace "$NAMESPACE" "$@"; }
 say()     { printf '%s  %s\n' "$(date -u +%H:%M:%S)" "$*"; }
 fail()    { printf '::error::%s\n' "$*"; exit 1; }
-summary() { if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then printf '%s\n' "$*" >> "$GITHUB_STEP_SUMMARY"; fi; }
+# GitHub keeps each step's summary separate, so rows are collected here and the
+# last step of the run (log deployed / log rollback) prints them as one table.
+SUMMARY_ROWS="${STATE_FILE%.state}.summary.md"
+summary() { printf '%s\n' "$*" >> "$SUMMARY_ROWS"; }
+report() {
+  [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -s "$SUMMARY_ROWS" ] || return 0
+  # shellcheck disable=SC2016  # the backticks are Markdown, not a command
+  { printf '### Release `%s`\n\n| Step | Result |\n|---|---|\n' "${1:-}"; cat "$SUMMARY_ROWS"; } >> "$GITHUB_STEP_SUMMARY"
+}
 is_commit() { [[ "$1" =~ ^[0-9a-f]{7,40}$ ]]; }
 upper()     { printf '%s' "$1" | tr '[:lower:]' '[:upper:]'; }   # (bash 3.2 on macOS has no ${x^^})
 
@@ -46,8 +54,7 @@ image_of() { k get deploy "$1" -o jsonpath='{.spec.template.spec.containers[0].i
 # ---------------------------------------------------------------------------------
 snapshot() {
   : > "$STATE_FILE"
-  summary "| Step | Result |"
-  summary "|---|---|"
+  : > "$SUMMARY_ROWS"
   for d in "${DEPLOYMENTS[@]}"; do
     local rev img
     rev="$(revision "$d")"; img="$(image_of "$d")"
@@ -288,6 +295,7 @@ verify_previous() {
 # policy "GridPulse - release rolled back by the pipeline" (terraform/monitoring.tf).
 log_event() {
   local event="$1" version="$2" severity=NOTICE payload
+  report "$version"
   [ "$event" = rollback ] && severity=ERROR
   local restored="" failed="$version"
   if [ -s "$STATE_FILE" ]; then load_state; restored="${PREVIOUS_VERSION:-}"; fi
