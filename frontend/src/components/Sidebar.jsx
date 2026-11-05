@@ -1,4 +1,11 @@
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { api } from "../services/api";
+
+// Milestone 6: the release (git commit) of this bundle and of the API that
+// answered, so a deploy - or an automatic rollback - is visible on screen.
+const UI_VERSION = import.meta.env.VITE_APP_VERSION || "dev";
+const short = (v) => (v && v.length > 12 ? v.slice(0, 7) : v);
 
 const LINKS = [
   { to: "/", label: "Dashboard", end: true },
@@ -9,6 +16,12 @@ const LINKS = [
 ];
 
 export default function Sidebar() {
+  const [apiVersion, setApiVersion] = useState(null);
+
+  useEffect(() => {
+    api.version().then((v) => setApiVersion(v.version)).catch(() => setApiVersion("unavailable"));
+  }, []);
+
   return (
     <aside
       style={{
@@ -52,6 +65,9 @@ export default function Sidebar() {
 
       <div style={{ marginTop: "auto", fontSize: "var(--fs-xs)", color: "var(--text-tertiary)" }}>
         Live dashboard — forecasts run on a trained model, jobs process asynchronously.
+        <div style={{ marginTop: "0.75rem", fontFamily: "var(--font-data)" }}>
+          UI {short(UI_VERSION)} · API {short(apiVersion) || "…"}
+        </div>
       </div>
     </aside>
   );

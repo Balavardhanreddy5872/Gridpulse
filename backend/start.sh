@@ -9,6 +9,10 @@
 #     On SIGTERM (pod deleted / scaled down / rolled) uvicorn stops accepting
 #     new connections and gives in-flight requests up to 20 s to finish.
 #     --proxy-headers: trust X-Forwarded-Proto from the Google load balancer.
+#     --no-access-log: Milestone 6 - the app writes its own JSON request log
+#     (status, latency, route, request id; app/request_logging.py) instead.
+#  Every step logs JSON lines on stdout (app/logging_config.py), so Cloud
+#  Logging stores them as structured entries.
 set -e
 cd /app/backend
 alembic upgrade head
@@ -16,4 +20,5 @@ if [ "${SEED_DEMO_DATA:-false}" = "true" ]; then
   python /app/scripts/seed_database.py
 fi
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000 \
-  --proxy-headers --forwarded-allow-ips='*' --timeout-graceful-shutdown 20
+  --proxy-headers --forwarded-allow-ips='*' --timeout-graceful-shutdown 20 \
+  --no-access-log

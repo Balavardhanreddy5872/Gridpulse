@@ -1,0 +1,386 @@
+{
+  "displayName": "GridPulse - production (Milestone 6)",
+  "mosaicLayout": {
+    "columns": 48,
+    "tiles": [
+      {
+        "width": 12,
+        "height": 8,
+        "widget": {
+          "title": "HTTP 5xx - last 60 min (log-based metric)",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "timeSeriesFilter": {
+                "filter": "metric.type=\"logging.googleapis.com/user/gridpulse_http_5xx\" resource.type=\"k8s_container\"",
+                "aggregation": {
+                  "alignmentPeriod": "3600s",
+                  "perSeriesAligner": "ALIGN_DELTA",
+                  "crossSeriesReducer": "REDUCE_SUM"
+                }
+              }
+            },
+            "sparkChartView": {
+              "sparkChartType": "SPARK_BAR"
+            },
+            "thresholds": [
+              {
+                "value": 1,
+                "color": "RED",
+                "direction": "ABOVE"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "width": 12,
+        "height": 8,
+        "widget": {
+          "title": "HTTPS uptime check - share of checks passing",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "timeSeriesFilter": {
+                "filter": "metric.type=\"monitoring.googleapis.com/uptime_check/check_passed\" resource.type=\"uptime_url\" resource.label.\"host\"=\"gridpulse-9.duckdns.org\"",
+                "aggregation": {
+                  "alignmentPeriod": "300s",
+                  "perSeriesAligner": "ALIGN_FRACTION_TRUE",
+                  "crossSeriesReducer": "REDUCE_MEAN"
+                }
+              }
+            },
+            "sparkChartView": {
+              "sparkChartType": "SPARK_LINE"
+            },
+            "thresholds": [
+              {
+                "value": 0.9,
+                "color": "RED",
+                "direction": "BELOW"
+              }
+            ]
+          }
+        },
+        "xPos": 12
+      },
+      {
+        "width": 12,
+        "height": 8,
+        "widget": {
+          "title": "Backend pods running",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "timeSeriesFilter": {
+                "filter": "metric.type=\"kubernetes.io/container/uptime\" resource.type=\"k8s_container\" resource.label.\"cluster_name\"=\"gridpulse-gke\" resource.label.\"namespace_name\"=\"gridpulse\" resource.label.\"container_name\"=\"backend\"",
+                "aggregation": {
+                  "alignmentPeriod": "60s",
+                  "perSeriesAligner": "ALIGN_MEAN",
+                  "crossSeriesReducer": "REDUCE_COUNT"
+                }
+              }
+            },
+            "sparkChartView": {
+              "sparkChartType": "SPARK_LINE"
+            }
+          }
+        },
+        "xPos": 24
+      },
+      {
+        "width": 12,
+        "height": 8,
+        "widget": {
+          "title": "Frontend pods running",
+          "scorecard": {
+            "timeSeriesQuery": {
+              "timeSeriesFilter": {
+                "filter": "metric.type=\"kubernetes.io/container/uptime\" resource.type=\"k8s_container\" resource.label.\"cluster_name\"=\"gridpulse-gke\" resource.label.\"namespace_name\"=\"gridpulse\" resource.label.\"container_name\"=\"frontend\"",
+                "aggregation": {
+                  "alignmentPeriod": "60s",
+                  "perSeriesAligner": "ALIGN_MEAN",
+                  "crossSeriesReducer": "REDUCE_COUNT"
+                }
+              }
+            },
+            "sparkChartView": {
+              "sparkChartType": "SPARK_LINE"
+            }
+          }
+        },
+        "xPos": 36
+      },
+      {
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "HTTP 5xx per minute, by status and route (gridpulse_http_5xx)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"logging.googleapis.com/user/gridpulse_http_5xx\" resource.type=\"k8s_container\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_DELTA",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": [
+                        "metric.label.\"status_code\"",
+                        "metric.label.\"route\""
+                      ]
+                    }
+                  }
+                },
+                "plotType": "STACKED_BAR",
+                "targetAxis": "Y1"
+              }
+            ],
+            "yAxis": {
+              "label": "5xx responses / min",
+              "scale": "LINEAR"
+            }
+          }
+        },
+        "yPos": 8
+      },
+      {
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Load balancer requests per minute, by response class",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"loadbalancing.googleapis.com/https/request_count\" resource.type=\"https_lb_rule\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_DELTA",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": [
+                        "metric.label.\"response_code_class\""
+                      ]
+                    }
+                  }
+                },
+                "plotType": "STACKED_BAR",
+                "targetAxis": "Y1"
+              }
+            ],
+            "yAxis": {
+              "label": "requests / min",
+              "scale": "LINEAR"
+            }
+          }
+        },
+        "xPos": 24,
+        "yPos": 8
+      },
+      {
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "CPU usage per pod (cores)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"kubernetes.io/container/cpu/core_usage_time\" resource.type=\"k8s_container\" resource.label.\"cluster_name\"=\"gridpulse-gke\" resource.label.\"namespace_name\"=\"gridpulse\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_RATE",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": [
+                        "resource.label.\"pod_name\""
+                      ]
+                    }
+                  }
+                },
+                "plotType": "LINE",
+                "targetAxis": "Y1"
+              }
+            ],
+            "yAxis": {
+              "label": "CPU cores",
+              "scale": "LINEAR"
+            }
+          }
+        },
+        "yPos": 24
+      },
+      {
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Memory used per pod (bytes, non-evictable)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"kubernetes.io/container/memory/used_bytes\" resource.type=\"k8s_container\" resource.label.\"cluster_name\"=\"gridpulse-gke\" resource.label.\"namespace_name\"=\"gridpulse\" metric.label.\"memory_type\"=\"non-evictable\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_MEAN",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": [
+                        "resource.label.\"pod_name\""
+                      ]
+                    }
+                  }
+                },
+                "plotType": "LINE",
+                "targetAxis": "Y1"
+              }
+            ],
+            "yAxis": {
+              "label": "bytes",
+              "scale": "LINEAR"
+            }
+          }
+        },
+        "xPos": 24,
+        "yPos": 24
+      },
+      {
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Request latency at the load balancer (p50 / p95, ms)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"loadbalancing.googleapis.com/https/total_latencies\" resource.type=\"https_lb_rule\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_DELTA",
+                      "crossSeriesReducer": "REDUCE_PERCENTILE_50"
+                    }
+                  }
+                },
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "legendTemplate": "p50"
+              },
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"loadbalancing.googleapis.com/https/total_latencies\" resource.type=\"https_lb_rule\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_DELTA",
+                      "crossSeriesReducer": "REDUCE_PERCENTILE_95"
+                    }
+                  }
+                },
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "legendTemplate": "p95"
+              }
+            ],
+            "yAxis": {
+              "label": "ms",
+              "scale": "LINEAR"
+            }
+          }
+        },
+        "yPos": 40
+      },
+      {
+        "width": 24,
+        "height": 16,
+        "widget": {
+          "title": "Cloud SQL: CPU utilization (0-1) and open connections",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"cloudsql.googleapis.com/database/cpu/utilization\" resource.type=\"cloudsql_database\" resource.label.\"database_id\"=\"gridpulse-509202:gridpulse-db\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_MEAN",
+                      "crossSeriesReducer": "REDUCE_MEAN"
+                    }
+                  }
+                },
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "legendTemplate": "CPU utilization"
+              },
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"cloudsql.googleapis.com/database/postgresql/num_backends\" resource.type=\"cloudsql_database\" resource.label.\"database_id\"=\"gridpulse-509202:gridpulse-db\"",
+                    "aggregation": {
+                      "alignmentPeriod": "60s",
+                      "perSeriesAligner": "ALIGN_MEAN",
+                      "crossSeriesReducer": "REDUCE_SUM"
+                    }
+                  }
+                },
+                "plotType": "LINE",
+                "targetAxis": "Y1",
+                "legendTemplate": "connections"
+              }
+            ],
+            "yAxis": {
+              "label": "utilization / connections",
+              "scale": "LINEAR"
+            }
+          }
+        },
+        "xPos": 24,
+        "yPos": 40
+      },
+      {
+        "width": 16,
+        "height": 16,
+        "widget": {
+          "title": "Container restarts (per 5 min)",
+          "xyChart": {
+            "dataSets": [
+              {
+                "timeSeriesQuery": {
+                  "timeSeriesFilter": {
+                    "filter": "metric.type=\"kubernetes.io/container/restart_count\" resource.type=\"k8s_container\" resource.label.\"cluster_name\"=\"gridpulse-gke\" resource.label.\"namespace_name\"=\"gridpulse\"",
+                    "aggregation": {
+                      "alignmentPeriod": "300s",
+                      "perSeriesAligner": "ALIGN_DELTA",
+                      "crossSeriesReducer": "REDUCE_SUM",
+                      "groupByFields": [
+                        "resource.label.\"container_name\""
+                      ]
+                    }
+                  }
+                },
+                "plotType": "STACKED_BAR",
+                "targetAxis": "Y1"
+              }
+            ],
+            "yAxis": {
+              "label": "restarts",
+              "scale": "LINEAR"
+            }
+          }
+        },
+        "yPos": 56
+      },
+      {
+        "width": 32,
+        "height": 16,
+        "widget": {
+          "title": "Backend errors and deployments (logs)",
+          "logsPanel": {
+            "filter": "(resource.type=\"k8s_container\" resource.labels.namespace_name=\"gridpulse\" severity>=ERROR) OR logName=\"projects/gridpulse-509202/logs/gridpulse-deployments\""
+          }
+        },
+        "xPos": 16,
+        "yPos": 56
+      }
+    ]
+  }
+}

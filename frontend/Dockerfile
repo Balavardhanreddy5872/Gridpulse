@@ -23,12 +23,20 @@ COPY frontend/ ./
 # nginx (stage 2) forwards those to the backend, so the SAME image works at
 # http://localhost and at the VM's public IP with no rebuild.
 ENV VITE_API_BASE_URL=""
-RUN npm run build
+# Milestone 6: the release (git commit) - shown in the sidebar and served as
+# /version.json so the CI/CD pipeline can check which release is live.
+ARG APP_VERSION=dev
+ENV VITE_APP_VERSION=${APP_VERSION}
+RUN npm run build \
+ && printf '{"service":"gridpulse-frontend","version":"%s"}\n' "$APP_VERSION" > dist/version.json
 
 ############################################################
 # Stage 2 - serve: nginx + the built files only (no Node, no node_modules)
 ############################################################
 FROM nginx:1.27-alpine
+ARG APP_VERSION=dev
+LABEL org.opencontainers.image.revision=${APP_VERSION} \
+      org.opencontainers.image.source=https://github.com/Balavardhanreddy5872/Gridpulse
 
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /src/dist /usr/share/nginx/html

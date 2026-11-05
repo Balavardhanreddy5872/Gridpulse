@@ -88,6 +88,14 @@ class Settings(BaseSettings):
     FORECAST_HORIZON_HOURS: int = 24
     MAX_UPLOAD_MB: int = 10
 
+    # --- Milestone 6: observability --------------------------------------------
+    # LOG_LEVEL is read by app/logging_config.py (JSON logs on stdout).
+    LOG_LEVEL: str = "INFO"
+    # GET /api/system/simulate-error returns a deliberate HTTP 5xx for the
+    # monitoring demo (JSON log entry -> log-based metric -> alert). Turned on
+    # in k8s/backend-configmap.yaml; off by default everywhere else.
+    ENABLE_ERROR_SIMULATION: bool = False
+
     # A job left in "processing" longer than this (e.g. the VM died mid-job)
     # is put back in the queue when the worker starts.
     STALE_JOB_MINUTES: int = 10

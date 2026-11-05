@@ -24,6 +24,7 @@ async function request(path, options = {}) {
 
 export const api = {
   health: () => request("/api/health"),
+  version: () => request("/api/version"),
 
   listRegions: () => request("/api/regions"),
   getRegion: (id) => request(`/api/regions/${id}`),

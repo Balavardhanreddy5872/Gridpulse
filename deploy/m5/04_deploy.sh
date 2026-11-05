@@ -15,6 +15,13 @@ cd "$(dirname "$0")"
 source ./config.sh
 need kubectl "gcloud components install kubectl gke-gcloud-auth-plugin"
 
+# Milestone 6: the CI/CD pipeline owns deploys now. Running this would put the
+# Milestone 5 images (v5) back and undo the last pipeline release.
+RUNNING="$(k get deploy backend -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)"
+if [[ "${RUNNING##*:}" =~ ^[0-9a-f]{12}$ ]] && [ "${ALLOW_MANUAL_DEPLOY:-0}" != 1 ]; then
+  die "the cluster runs pipeline release ${RUNNING##*:} - deploy by pushing to main (ALLOW_MANUAL_DEPLOY=1 to override)"
+fi
+
 if [ "${SKIP_BUILD:-0}" != "1" ]; then
   need docker "Docker Desktop must be running to build the images"
   step "Building and pushing $IMAGE_TAG"

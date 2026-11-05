@@ -1,5 +1,7 @@
-# GridPulse API (FastAPI + XGBoost model), image built and pushed by
-# deploy/build_and_push.sh v5.
+# GridPulse API (FastAPI + XGBoost model).
+# Milestone 6: the image is built, pushed and deployed by the CI/CD pipeline
+# (.github/workflows/deploy.yml) as gridpulse-backend:<commit>; v5 below is the
+# base tag the pipeline overrides.
 #
 # replicas is deliberately NOT set: the HorizontalPodAutoscaler
 # (backend-hpa.yaml) owns the replica count (2-4). Setting it here would reset
@@ -63,6 +65,9 @@ spec:
             - name: http
               containerPort: 8000
           envFrom:
+            # Generated from backend-config.properties by kustomize; the name
+            # gets a content hash (backend-config-<hash>), so a config change is
+            # a new rollout - and is rolled back with the image (Milestone 6).
             - configMapRef:
                 name: backend-config
           env:

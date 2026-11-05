@@ -12,6 +12,22 @@
 *credentials*.json
 service-account*.json
 
+# Terraform: state and plans can contain resource details - they live in the
+# gs://gridpulse-509202-tfstate bucket, never in git. The lock file IS committed.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+terraform/plan-*.txt
+crash.log
+crash.*.log
+# the team's alert e-mail addresses (see terraform/notification.auto.tfvars.example)
+terraform/notification.auto.tfvars
+
+# CI/CD render directory (deploy/ci/release.sh)
+.release/
+
 # test artifacts
 backend/tests/test_uploads/
 backend/tests/test_gridpulse.db
@@ -51,6 +67,7 @@ docs/**/*Written_Analysis*
 # Milestone submission material - submitted on Canvas / OneDrive, never pushed
 # (slides, written analyses, evidence files, screenshots, the whole M5 docs folder)
 docs/milestone5/
+docs/milestone6/
 docs/**/*.pptx
 docs/**/*.pdf
 docs/**/*.docx

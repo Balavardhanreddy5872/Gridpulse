@@ -1,6 +1,30 @@
 # GridPulse — Smart Grid Load Forecasting & Peak-Risk Alerting
 
-**Milestone 5 (current): Kubernetes runs the containers.** GridPulse runs on a
+**Milestone 6 (current): observable, and deployed by a pipeline.**
+Live at **https://gridpulse-9.duckdns.org**.
+
+```
+push to main ──► GitHub Actions ──► test in the backend image ──► push gridpulse-{backend,frontend}:<commit>
+                 (Workload Identity      ──► kubectl apply -k k8s/ ──► wait: startup/liveness/readiness probes
+                  Federation, no keys)   ──► health check over HTTPS (/api/version = <commit>, /api/regions, /)
+                                         └─► on ANY failure: kubectl rollout undo ──► verify previous release serves
+backend pods ──JSON logs──► Cloud Logging ──► log-based metric gridpulse_http_5xx ──► dashboard + alert ──► e-mail
+```
+
+| What | Where |
+|---|---|
+| Structured JSON logs (one entry per request: status, route, latency, request id; stack traces for Error Reporting) | [`backend/app/logging_config.py`](backend/app/logging_config.py), [`request_logging.py`](backend/app/request_logging.py); nginx: [`frontend/nginx.conf`](frontend/nginx.conf) |
+| Controlled HTTP 5xx for the demo | `GET /api/system/simulate-error` (`?status=500..504`) |
+| Release running now | `GET /api/version` (backend), `/version.json` (frontend), sidebar footer |
+| Log-based metric, dashboard, alert policies, uptime check | [`terraform/monitoring.tf`](terraform/monitoring.tf), [`terraform/dashboards/gridpulse.json`](terraform/dashboards/gridpulse.json) |
+| All cloud infrastructure + what is deliberately not in Terraform | [`terraform/`](terraform/) — [`terraform/README.md`](terraform/README.md) |
+| Pipeline | [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) + [`deploy/ci/release.sh`](deploy/ci/release.sh) |
+| Setup + demo helpers | [`deploy/m6/`](deploy/m6/) `01_…` → `03_…`, `demo_5xx.sh`, `demo_bad_release.sh`, `show.sh` |
+
+Since Milestone 6 the cluster is changed **only by the pipeline**: push to `main`
+instead of running `kubectl apply -k k8s/` by hand.
+
+**Milestone 5: Kubernetes runs the containers.** GridPulse runs on a
 GKE Autopilot cluster as self-healing, autoscaled replicas behind a Google
 load balancer with a Google-managed certificate.
 
@@ -83,13 +107,16 @@ the backend starts, polling `async_jobs` and processing several
 concurrently so the API stays responsive during a simulated spike.
 
 ### Tests
-38 pytest tests (`backend/tests/`) — health, regions, forecast (incl.
+54 pytest tests (`backend/tests/`) — health, regions, forecast (incl.
 naive-fallback), risk-engine thresholds, PDF upload/extraction, job
 creation/filtering, plus Milestone 4: uploads go to the bucket (never local disk),
 DB URL built from Secret Manager + private IP, migration covers every ORM
 column, stale-job recovery; and Milestone 5: a DB outage fails readiness but
 not liveness, readiness answers within its time limit, a job is claimed by
-only one replica, each pod caps its request threads, Google API calls retry while the GKE metadata server starts.
+only one replica, each pod caps its request threads, Google API calls retry while the GKE metadata server starts;
+and Milestone 6: every request is one JSON log entry with the fields the 5xx log-based metric counts, the
+controlled 5xx, successful probes are not logged, and a contract test that the metric's filter only uses fields the
+app really logs.
 
 ### Docs
 - `docs/gridpulse_milestone1.pptx` — the 2-slide deck.
@@ -190,3 +217,5 @@ tests specifically.)
 
 **Containerization** (Dockerfile / docker-compose.yml) is done in Milestone 3. **Managed state** (Cloud SQL, Cloud Storage,
 Secret Manager) is Milestone 4. **Orchestration** (GKE Autopilot, Ingress + managed HTTPS, HPA, PDB) is Milestone 5.
+**Observability + automation** (JSON logs, log-based metric, dashboard, alerts, Terraform, CI/CD with automatic
+rollback) is Milestone 6.

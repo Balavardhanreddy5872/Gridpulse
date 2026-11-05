@@ -10,6 +10,7 @@
 #     docs/milestone5/evidence/hpa_scaling.txt
 #
 #   ./deploy/m5/demo_autoscale.sh
+#   LOAD_SECONDS=120 ./deploy/m5/demo_autoscale.sh    # shorter load (video: whole 2->4->2 in ~4 min)
 #   NO_SCALE_DOWN=1 ./deploy/m5/demo_autoscale.sh     # stop once the load ends
 #
 # Tip for the video: in a second terminal run
@@ -39,7 +40,9 @@ line() {
 
 START_REPLICAS="$(k get hpa backend -o jsonpath='{.status.currentReplicas}')"
 k delete job load-generator --ignore-not-found --wait=true >/dev/null
-k apply -f "$K8S_DIR/loadtest/load-generator.yaml" | log
+# DURATION_SECONDS in the manifest is 240; LOAD_SECONDS overrides it for this run only
+sed "s/value: \"240\"/value: \"${LOAD_SECONDS:-240}\"/" "$K8S_DIR/loadtest/load-generator.yaml" \
+  | k apply -f - | log
 echo | log
 echo "=== Timeline (CPU is % of the 250m request; target 60%)" | log
 

@@ -5,8 +5,8 @@
 #     the address never changes even if the Ingress is recreated.
 #  2. Points your DuckDNS name at it (if you give the DuckDNS token), or tells
 #     you exactly what to type on duckdns.org.
-#  3. Writes the hostname into k8s/managed-certificate.yaml and
-#     k8s/backend-configmap.yaml (the lines marked "# DOMAIN").
+#  3. Writes the hostname into k8s/managed-certificate.yaml (the line marked
+#     "# DOMAIN") and CORS_ORIGINS in k8s/backend-config.properties.
 #  4. Checks that public DNS already answers with that IP - the Google-managed
 #     certificate cannot be issued until it does.
 #
@@ -60,8 +60,10 @@ esac
 
 step "Writing $DOMAIN into the manifests"
 perl -pi -e "s{^(\\s*-\\s+)\\S+(\\s+# DOMAIN)\$}{\${1}$DOMAIN\${2}}" "$K8S_DIR/managed-certificate.yaml"
-perl -pi -e "s{^(\\s*CORS_ORIGINS:\\s+)\"[^\"]*\"(\\s+# DOMAIN)\$}{\${1}\"https://$DOMAIN\"\${2}}" "$K8S_DIR/backend-configmap.yaml"
-grep -n '# DOMAIN' "$K8S_DIR/managed-certificate.yaml" "$K8S_DIR/backend-configmap.yaml" | sed 's/^/    /'
+# Milestone 6: the backend settings moved to backend-config.properties (kustomize configMapGenerator)
+perl -pi -e "s{^CORS_ORIGINS=.*\$}{CORS_ORIGINS=https://$DOMAIN}" "$K8S_DIR/backend-config.properties"
+grep -n '# DOMAIN' "$K8S_DIR/managed-certificate.yaml" | sed 's/^/    /'
+grep -n '^CORS_ORIGINS=' "$K8S_DIR/backend-config.properties" | sed 's/^/    /'
 
 step "Public DNS check (Google's certificate authority must see the same answer)"
 resolve() {

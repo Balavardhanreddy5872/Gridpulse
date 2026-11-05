@@ -37,6 +37,12 @@ docs
 database
 deploy
 README.md
+# Milestone 6: infrastructure + pipeline files (terraform/.terraform holds
+# provider binaries - hundreds of MB that must never reach the builder)
+terraform
+k8s
+.github
+.release
 **/*.tar.gz
 **/*.zip
 docker-compose*.yml

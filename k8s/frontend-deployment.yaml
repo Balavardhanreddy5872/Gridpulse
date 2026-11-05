@@ -1,5 +1,6 @@
-# GridPulse dashboard: the React build served by nginx (image from
-# deploy/build_and_push.sh v5). The HPA (frontend-hpa.yaml) owns the replica
+# GridPulse dashboard: the React build served by nginx. Milestone 6: built and
+# deployed by the CI/CD pipeline as gridpulse-frontend:<commit> (v5 below is the
+# base tag the pipeline overrides). The HPA (frontend-hpa.yaml) owns the replica
 # count (2-4), so replicas is not set here.
 apiVersion: apps/v1
 kind: Deployment

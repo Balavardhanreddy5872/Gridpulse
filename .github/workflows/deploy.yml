@@ -1,0 +1,185 @@
+# GridPulse CI/CD (Milestone 6)
+#
+# Every push to main (the deployment branch):
+#   1. build    - build both images, run the test suite inside the backend image and
+#                 `nginx -t` inside the frontend image, then push both to Artifact
+#                 Registry tagged with the commit (only tested images ship)
+#   2. deploy   - record the release that is running now (the rollback point),
+#                 kubectl apply -k k8s/ with the new images, wait for the rollout
+#                 (startup / liveness / readiness probes must pass), then health-check
+#                 the live HTTPS URL. If ANY of that fails: kubectl rollout undo to the
+#                 recorded release, wait for it, and verify it is serving traffic again.
+#
+# No keys or secrets are stored in GitHub. The pipeline signs in with GitHub's
+# OIDC token through Workload Identity Federation (terraform/cicd.tf), which only
+# accepts tokens from this repository's main branch, and acts as the
+# gridpulse-ci-deployer service account (push images, deploy to the cluster,
+# write deployment log entries - nothing else).
+name: CI/CD - build, deploy, health-check, roll back
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  id-token: write # lets the job request GitHub's OIDC token (Workload Identity Federation)
+
+env:
+  PROJECT_ID: gridpulse-509202
+  REGION: us-central1
+  REGISTRY: us-central1-docker.pkg.dev/gridpulse-509202/gridpulse
+  CLUSTER: gridpulse-gke
+  NAMESPACE: gridpulse
+  APP_URL: https://gridpulse-9.duckdns.org
+  # Not secrets - identifiers from `terraform output` (deploy/m6/03_wire_pipeline.sh writes them):
+  WIF_PROVIDER: projects/867504599873/locations/global/workloadIdentityPools/github-actions/providers/github # WIF
+  DEPLOYER_SA: gridpulse-ci-deployer@gridpulse-509202.iam.gserviceaccount.com
+
+jobs:
+  build:
+    name: Test, build and push images
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Release version = commit
+        id: version
+        run: |
+          if [[ "$WIF_PROVIDER" == *PROJECT_NUMBER* ]]; then
+            echo "::error::WIF_PROVIDER is not set - run deploy/m6/03_wire_pipeline.sh after terraform apply"
+            exit 1
+          fi
+          echo "version=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          echo "Release **${GITHUB_SHA::12}** from \`${GITHUB_REF_NAME}\` ([${GITHUB_SHA}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}))" >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: backend/Dockerfile
+          platforms: linux/amd64
+          build-args: APP_VERSION=${{ steps.version.outputs.version }}
+          tags: ${{ env.REGISTRY }}/gridpulse-backend:${{ steps.version.outputs.version }}
+          load: true
+          provenance: false
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+
+      - name: Run the test suite inside the backend image
+        run: |
+          docker run --rm --user root -v "$PWD:/src" -w /src/backend \
+            "$REGISTRY/gridpulse-backend:${{ steps.version.outputs.version }}" \
+            sh -c "pip install -q pytest reportlab httpx && python -m pytest -q -p no:cacheprovider"
+
+      - name: Build frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: frontend/Dockerfile
+          platforms: linux/amd64
+          build-args: APP_VERSION=${{ steps.version.outputs.version }}
+          tags: ${{ env.REGISTRY }}/gridpulse-frontend:${{ steps.version.outputs.version }}
+          load: true
+          provenance: false
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+      - name: Check the frontend image (nginx config, version file)
+        run: |
+          image="$REGISTRY/gridpulse-frontend:${{ steps.version.outputs.version }}"
+          docker run --rm "$image" nginx -t
+          docker run --rm "$image" cat /usr/share/nginx/html/version.json | grep -q '"${{ steps.version.outputs.version }}"'
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation - no keys)
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+          token_format: access_token
+
+      - name: Log in to Artifact Registry
+        uses: docker/login-action@v4
+        with:
+          registry: us-central1-docker.pkg.dev
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+
+      - name: Push the tested images
+        run: |
+          docker push "$REGISTRY/gridpulse-backend:${{ steps.version.outputs.version }}"
+          docker push "$REGISTRY/gridpulse-frontend:${{ steps.version.outputs.version }}"
+
+  deploy:
+    name: Deploy to GKE, health-check, roll back on failure
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    # One deploy at a time: a newer push builds and tests in parallel, then its
+    # deploy waits for the running one instead of interrupting it mid-rollout.
+    concurrency:
+      group: gridpulse-production
+      cancel-in-progress: false
+    environment:
+      name: production
+      url: https://gridpulse-9.duckdns.org
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Authenticate to Google Cloud (Workload Identity Federation - no keys)
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v3
+
+      - name: kubectl credentials for ${{ env.CLUSTER }}
+        uses: google-github-actions/get-gke-credentials@v3
+        with:
+          cluster_name: ${{ env.CLUSTER }}
+          location: ${{ env.REGION }}
+
+      - name: Record the release running now (rollback point)
+        id: snapshot
+        run: bash deploy/ci/release.sh snapshot
+
+      - name: Deploy ${{ env.VERSION }}
+        id: apply
+        run: bash deploy/ci/release.sh apply "$VERSION"
+
+      - name: Wait for the rollout (startup, liveness and readiness probes)
+        id: rollout
+        run: bash deploy/ci/release.sh wait
+
+      - name: Health check through ${{ env.APP_URL }}
+        id: health
+        run: bash deploy/ci/release.sh verify "$VERSION"
+
+      - name: Record the successful deploy in Cloud Logging
+        continue-on-error: true
+        run: bash deploy/ci/release.sh log deployed "$VERSION"
+
+      # ---- only when something above failed ------------------------------------
+      - name: AUTOMATIC ROLLBACK to the recorded release
+        id: rollback
+        if: failure() && steps.snapshot.outcome == 'success'
+        run: bash deploy/ci/release.sh rollback
+
+      - name: Verify the previous release is serving traffic
+        if: failure() && steps.rollback.outcome == 'success'
+        run: bash deploy/ci/release.sh verify-previous
+
+      - name: Record the rollback in Cloud Logging (alert "release rolled back")
+        if: failure() && steps.rollback.outcome == 'success'
+        continue-on-error: true
+        run: bash deploy/ci/release.sh log rollback "$VERSION"

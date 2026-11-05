@@ -1,11 +1,16 @@
-# Apply everything in one go:   kubectl apply -k k8s/
+# Everything GridPulse runs on GKE.
+#
+# Milestone 6: the CI/CD pipeline (.github/workflows/deploy.yml) deploys this
+# on every push to main. It renders a small overlay (deploy/ci/release.sh) that
+# sets both images to the commit being deployed, then `kubectl apply -k`. The
+# image tags below (v5) are only the base - do not `kubectl apply -k k8s/` by
+# hand any more, or the cluster goes back to the Milestone 5 images.
 # (k8s/loadtest/ is NOT included - it is started only during the autoscaling demo.)
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - namespace.yaml
   - serviceaccount.yaml
-  - backend-configmap.yaml
   - backend-deployment.yaml
   - backend-service.yaml
   - backend-hpa.yaml
@@ -18,3 +23,15 @@ resources:
   - https-redirect.yaml
   - managed-certificate.yaml
   - ingress.yaml
+
+# Backend settings (backend-config.properties) -> ConfigMap backend-config-<hash>.
+# The hash suffix makes every config change a new rollout that can be rolled
+# back, instead of an in-place edit the running pods never notice.
+configMapGenerator:
+  - name: backend-config
+    namespace: gridpulse
+    envs:
+      - backend-config.properties
+    options:
+      labels:
+        app.kubernetes.io/part-of: gridpulse

@@ -7,9 +7,10 @@
 #
 #   ./deploy/m5/watch_traffic.sh                    # https://<domain>/api/health/ready
 #   ./deploy/m5/watch_traffic.sh /api/regions       # any path
+#   ./deploy/m5/watch_traffic.sh /api/version       # M6: also prints which release answered
 #   Ctrl-C prints the totals
 set -uo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")" || exit 1
 source ./config.sh
 URL="https://${DOMAIN}${1:-/api/health/ready}"
 total=0; failed=0
@@ -19,8 +20,9 @@ while true; do
   resp="$(curl -sS --max-time 5 -w $'\n%{http_code}' "$URL" 2>/dev/null)"
   code="${resp##*$'\n'}"; body="${resp%$'\n'*}"
   pod="$(printf '%s' "$body" | sed -n 's/.*"pod":"\([^"]*\)".*/\1/p')"
+  ver="$(printf '%s' "$body" | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')"   # M6: /api/version
   total=$((total + 1))
   case "$code" in 2??) mark="ok  " ;; *) mark="FAIL"; failed=$((failed + 1)) ;; esac
-  printf '%s  %s  %s  %-34s  failed so far: %d/%d\n' "$(now)" "$mark" "${code:-000}" "${pod:--}" "$failed" "$total"
+  printf '%s  %s  %s  %-34s %s failed so far: %d/%d\n' "$(now)" "$mark" "${code:-000}" "${pod:--}" "${ver:+release $ver  }" "$failed" "$total"
   sleep 0.5
 done

@@ -75,6 +75,15 @@ RUN chmod -R a+rX /app/backend /app/scripts /app/ml
 # filesystem and uploads go to Cloud Storage.
 RUN mkdir -p /app/uploads && chown app:app /app/uploads
 
+# Milestone 6: which release this is. The CI/CD pipeline passes the git commit
+# (--build-arg APP_VERSION=<sha>); the app reports it in every log line and at
+# GET /api/version, so the pipeline can confirm which release serves traffic.
+# Declared last so changing it never invalidates the dependency layers above.
+ARG APP_VERSION=dev
+ENV APP_VERSION=${APP_VERSION}
+LABEL org.opencontainers.image.revision=${APP_VERSION} \
+      org.opencontainers.image.source=https://github.com/Balavardhanreddy5872/Gridpulse
+
 USER app
 EXPOSE 8000
 

@@ -1,0 +1,6 @@
+# Copy to notification.auto.tfvars (git-ignored - keeps the team's addresses out
+# of the public repository) and list everyone who should receive alert e-mails.
+alert_emails = [
+  "teammate1@cougarnet.uh.edu",
+  "teammate2@cougarnet.uh.edu",
+]
